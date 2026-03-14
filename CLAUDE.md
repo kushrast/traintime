@@ -1,114 +1,145 @@
-# NYC Subway Mini-Games — Build Spec
+# Traintime — NYC Subway Learning App
 
 ## Overview
 
-A self-contained, offline-capable web app with two mini-games for learning the NYC subway system. No backend, no auth, no state persistence between sessions. Works offline after first load.
+A single-file web app for learning the NYC subway system through line mastery. The player focuses on one line at a time, playing multiple mini-games that each test a different dimension of knowing that line. Progress accumulates across game types until the line is mastered, unlocking connected lines.
+
+Live at: https://traintime.kushbuilds.com
+Hosted on DigitalOcean Droplet (159.65.253.241), served by Caddy.
+Caddy config repo: https://github.com/kushrast/caddy-config
 
 ---
 
 ## Tech Stack
 
-- **Framework**: Single HTML file or React (your call) — no build step preferred
-- **Data**: All station/line data bundled inline as JSON — no API calls
-- **Offline**: PWA with a simple service worker caching the initial load
-- **Hosting**: Static file, deployable anywhere (Netlify, your own server, etc.)
+- **Framework**: Single HTML file, no build step
+- **Data**: Station/line data bundled inline as JSON (~35KB)
+- **Hosting**: Static file served by Caddy on DigitalOcean
+- **Stats**: localStorage (backend sync deferred)
+
+---
+
+## Core Concept: Line Mastery
+
+The player picks a "home line" on first launch. All mini-games are scoped to that line. Other lines are locked until the current line reaches mastery (70%+ composite score across all game types).
+
+**Single session flow**: The player hits "Play" and the app serves a continuous mix of mini-game questions — station quiz, transfer quiz, neighborhood — in one session. The app picks which game type to serve next based on what the player is weakest at. No game-type menu; the player just plays.
+
+**Unlock progression**: Mastering a line unlocks lines that share transfer stations with it. You expand outward through the system naturally.
+
+**Composite mastery score** per line:
+- Station Quiz: % of stations identified correctly (first try) across all rounds
+- Transfer Quiz: % of transfer stations where player correctly identified all connecting lines
+- Neighborhood Mode: % of stations where player can name adjacent stops
+
+---
+
+## Mini-Games
+
+### 1. Station Quiz (built)
+Pick a random 10-stop consecutive stretch of the active line. 5 stations shown as anchors, 5 blanked out. Player picks from 5 multiple-choice options per blank. Wrong picks fade away. Contributes to station knowledge.
+
+### 2. Transfer Quiz
+Given a station on the active line that has transfers, show the station name and ask: "What other lines stop here?" Player taps line badges to select. Scoped to transfer stations on the active line only.
+
+### 3. Neighborhood Mode
+Spatial ordering questions scoped to the active line:
+- "What's one stop north/south of [station]?"
+- "What borough is [station] in?"
+- "How many stops between [A] and [B]?"
+Tests mental map of the line, not just station name recognition.
+
+### 4. Journey Mode (narrative, no quiz)
+Pre-written stories about characters riding the active line. Each journey has:
+- A named persona with context
+- Where they board and exit
+- Stops along the way with commentary
+- Why they might get off earlier or later
+
+Content created per-line via git issues. 10–15 journeys per line.
+
+---
+
+## Enablement Plan (Starting with Q Train)
+
+### Phase 1: Core Game Modes
+Get all interactive mini-games working independently, scoped to any line. No line-lock yet.
+- Station Quiz: already built, add streak multiplier and station context on miss
+- Transfer Quiz: new game mode
+- Neighborhood Mode: new game mode
+
+### Phase 2: Line Mastery System
+- Home line selection on first launch
+- Line lock: only active line playable, others greyed out
+- Composite mastery score across game types
+- Unlock connected lines via transfers at 70%+ mastery
+- Line progress dashboard
+
+### Phase 3: Learning Aids
+- Station context data: one-liner facts for each station (landmarks, cross-streets, neighborhood)
+- Show context on wrong answers across all game modes
+- Spaced repetition: weight toward missed/unseen stations
+
+### Phase 4: Journey Mode — Q Train
+- Write 10–15 journey stories for the Q train
+- Journey viewer UI (narrative, no quiz)
+- Each journey covers a different segment of the line
+
+### Phase 5: Journey Mode — Expansion
+- One git issue per line for journey content
+- Unlock journey content as lines are mastered
+
+### Phase 6: Infrastructure
+- PWA support (service worker, manifest, offline)
+- Backend stats sync (FastAPI + Postgres on existing droplet)
 
 ---
 
 ## Data Model
 
-Bundle the following inline in the app:
+Bundled inline in index.html from `data/subway_data.min.json`:
 
 ```json
 {
   "lines": {
-    "A": { "color": "#0039A6", "stops": ["Inwood–207 St", "207 St", "...in order..."] },
-    "1": { "color": "#EE352E", "stops": ["Van Cortlandt Park–242 St", "..."] },
-    ...all 24 lines
+    "Q": { "color": "#FCCC0A", "stops": ["96 St", "86 St", ...] },
+    ...
   },
   "stations": {
-    "Times Sq–42 St": { "lines": ["1","2","3","7","A","C","E","N","Q","R","W","S"], "borough": "Manhattan" },
-    "Jay St–MetroTech": { "lines": ["A","C","F","R"], "borough": "Brooklyn" },
-    ...all 472 stations
+    "96 St": { "lines": ["1","2","3","4","6","A","B","C","N","Q"], "borough": "Manhattan" },
+    ...
   }
 }
 ```
 
-**Source**: Pull from the MTA's public GTFS data or a clean community dataset like `nicoulaj/nyc-subway` on GitHub. The full dataset should be under 50KB bundled.
+23 lines, 358 stations. S line uses `shuttles` array instead of `stops`.
 
----
+## Stats Model (localStorage)
 
-## App Structure
-
+```json
+{
+  "active_line": "Q",
+  "fill_the_line": {
+    "Q": { "times_played": 4, "known_stations": ["96 St", "Canal St", ...], "recall_rate": 0.62 }
+  },
+  "transfer_quiz": {
+    "Times Sq-42 St": { "times_seen": 5, "times_correct": 3 }
+  },
+  "neighborhood": {
+    "Q": { "stations_tested": { "96 St": { "seen": 3, "correct": 2 } } }
+  }
+}
 ```
-/ (home screen)
-  → /fill-the-line
-  → /transfer-quiz
-```
-
-### Home Screen
-- Title + brief description
-- Two game cards with name, description, and "Play" button
-- No onboarding, no accounts, just tap and go
-
----
-
-## Game 1: Fill the Line
-
-### Concept
-Pick a subway line. A vertical ordered list of all its stops appears, with most blanked out. Type station names to fill in the blanks.
-
-### Rules
-- Show 7 stations pre-filled as anchors (endpoints + a few evenly distributed landmarks)
-- Remaining stops are blank `_____` placeholders
-- Player types a station name into any blank — fuzzy match accepted (case-insensitive, minor typos ok)
-- Correct guess reveals that stop and highlights it
-- No wrong-answer penalty, no timer
-- Round ends when all stops are filled
-- Score = number of guesses to complete (lower = better)
-
-### UX Details
-- Line selector at top (show line badge + name)
-- Vertical stop list with MTA-style dot-and-line visual connecting them
-- Text input at bottom, auto-focuses
-- Correct fill animates in (fade or slide)
-- "Give up" button reveals all remaining stops
-- End screen shows score + "Play Again" (same line) or "New Line"
-- Borough label shown next to each stop as a hint
-
----
-
-## Game 2: Transfer Quiz
-
-### Concept
-A station name appears. Tap all the subway lines that serve it. Submit when ready.
-
-### Rules
-- Station name + borough shown
-- Grid of all line badges displayed (shuffled)
-- Player taps to select/deselect lines
-- Submit button checks answer
-- Correct lines highlighted green, missed/wrong lines highlighted red
-- Score tracked as streak (consecutive correct answers)
-- Difficulty setting: Easy (only major transfer stations, 3+ lines), Hard (any station)
-
-### UX Details
-- Clean card layout, station name prominent
-- Line badges are large, tappable (min 44px tap target)
-- Immediate visual feedback on submit
-- "Next" button to advance
-- Streak counter visible throughout session
-- Session ends whenever player wants — no forced endpoint
 
 ---
 
 ## Visual Design
 
-Match MTA aesthetic:
-- Dark background (`#0a0a0a`)
-- Official MTA line colors for all badges (see color map below)
-- Helvetica Neue or system sans-serif (matches MTA signage)
-- Line badges: colored circles, white text, bold — except N/Q/R/W which are yellow with black text
+- Background: `#0a0a0a`, text: white
+- Helvetica Neue / system sans-serif
+- Official MTA line colors for badges
+- N/Q/R/W: yellow background, black text
+- MTA-style vertical line connecting stops
 
 ### MTA Line Colors
 ```
@@ -120,116 +151,19 @@ N/Q/R/W: #FCCC0A
 
 ---
 
-## Offline / PWA
+## Deployment
 
-- Service worker should cache: the HTML file, any CSS/JS, and the bundled data
-- First load requires network; all subsequent loads work offline
-- Add a `manifest.json` so it's installable on mobile home screen
-- App name: "Subway" or "NYC Lines" — keep it short
-
----
-
-## Stats & Progress Tracking
-
-### Storage — Local-First
-
-- **Primary store**: `localStorage` — all stats written here immediately, works fully offline
-- **Sync**: When the app detects an internet connection, push stats to a simple remote store (see below)
-- **Acceptable data loss**: If localStorage is cleared and the app is offline, stats are lost — this is fine
-- **Sync target**: A small FastAPI endpoint on the existing DigitalOcean Droplet, backed by Postgres.
-- **Sync strategy**: Last-write-wins on the full stats blob. No conflict resolution needed given solo usage.
-
-### Backend — Postgres Schema
-
-```sql
-CREATE TABLE subway_stats (
-  user_id     UUID PRIMARY KEY,          -- generated on first app launch, stored in localStorage
-  stats       JSONB NOT NULL,            -- full stats blob (see structure below)
-  updated_at  TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-```
-
-The `stats` JSONB blob structure:
-```json
-{
-  "fill_the_line": {
-    "A": { "times_played": 4, "best_score": 12, "recall_rate": 0.62 },
-    "1": { "times_played": 2, "best_score": 8, "recall_rate": 0.80 },
-    ...
-  },
-  "transfer_quiz": {
-    "Jay St–MetroTech": { "times_seen": 5, "times_correct": 3 },
-    "Atlantic Av–Barclays Ctr": { "times_seen": 2, "times_correct": 2 },
-    ...
-  }
-}
-```
-
-### Backend — API Endpoints
-
-```
-GET  /stats/{user_id}     → returns stats blob, or 404 if new user
-POST /stats/{user_id}     → upserts full stats blob, updates updated_at
-```
-
-Both endpoints are unauthenticated — this is a personal app, security is not a concern. Use `INSERT ... ON CONFLICT (user_id) DO UPDATE` for the upsert.
-
-### Sync Flow
-
-1. On app first launch: generate a `crypto.randomUUID()`, store in localStorage as `subway_user_id`
-2. On app load (if online): `GET /stats/{user_id}` and merge with localStorage (take whichever `updated_at` is more recent)
-3. After each game session: update localStorage immediately
-4. Whenever `navigator.onLine` is true and stats have changed: `POST /stats/{user_id}` with full blob
-
-### What to Track
-
-**Fill the Line — per line:**
-- Times played
-- Best score (fewest guesses)
-- Recall rate: % of stops the player filled in correctly before giving up or finishing (i.e. didn't need "give up" to reveal them)
-- e.g. "6 train: 62% recall, played 4 times"
-
-**Transfer Quiz — per station:**
-- Times seen
-- Times answered correctly (all lines right, no wrong selections)
-- Accuracy rate = correct / seen
-- e.g. "Jay St–MetroTech: 3/5 correct"
-
-### Stats Dashboard
-
-A third screen accessible from the home screen showing:
-
-**By Line (Fill the Line stats)**
-- List of all 24 lines with their recall %
-- Color-coded: red (<40%), yellow (40–70%), green (>70%)
-- Tap a line to see details or jump into a game
-
-**By Borough (Transfer Quiz stats)**
-- Aggregate accuracy for transfer stations grouped by borough: Manhattan, Brooklyn, Queens, Bronx
-- e.g. "Brooklyn transfer stations: 40% accuracy (8/20 stations mastered)"
-- A station is "mastered" when answered correctly 3+ times
-- Tap a borough to see individual station breakdown
-
-### Home Screen Integration
-- Each game card on the home screen shows a quick summary stat
-- Fill the Line card: "X of 24 lines above 70%"
-- Transfer Quiz card: "X of ~55 transfer stations mastered"
-
----
-
-## Out of Scope (for now)
-
-- User accounts or progress persistence
-- Route-building game
-- Map visualization
-- Timed modes
-- Leaderboards
+- Source: `/home/kush/Apps/subway/index.html`
+- Served from: `/var/www/traintime/index.html`
+- Deploy: `cp /home/kush/Apps/subway/index.html /var/www/traintime/index.html`
+- Caddy handles TLS automatically via Let's Encrypt
 
 ---
 
 ## Notes
 
-- Fuzzy matching for Fill the Line is important — "Times Sq" should match "Times Sq–42 St"
-- The GTFS stop order is the ground truth for line sequence — use it, don't manually order
-- Staten Island Railway can be excluded (it's technically separate from the subway)
-- Express vs local distinctions: treat each line independently (so 4 and 5 have different stop lists even though they share express stops)
+- GTFS stop order is ground truth for line sequence
+- Staten Island Railway excluded
+- Express vs local: each line treated independently
+- Fuzzy matching kept for potential future free-text mode
+- Q train is the starting line — 34 stops, Manhattan to Coney Island, good mix of transfers and solo stops

@@ -236,8 +236,8 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
   <div class="end-screen">
     <h2 id="end-title">Complete!</h2>
     <div class="end-stat">Total taps: <span id="end-guesses">0</span></div>
-    <div class="end-stat">First try: <span id="end-filled">0</span> / <span id="end-total">0</span></div>
-    <div class="end-stat">Accuracy: <span id="end-recall">0%</span></div>
+    <div class="end-stat">This round: <span id="end-filled">0</span> / <span id="end-total">0</span> first try</div>
+    <div class="end-stat">Line progress: <span id="end-recall">0%</span></div>
     <div class="end-buttons">
       <button class="btn-primary" id="play-again-btn">Play Again</button>
       <button class="btn-secondary" onclick="navigate('fill-the-line')">New Line</button>
@@ -392,6 +392,7 @@ function startGame(line, shuttle) {
   allStops = getStops(line, shuttle);
   guessCount = 0;
   filledByPlayer = 0;
+  firstTryStations = [];
   gameOver = false;
 
   // Sample a consecutive slice of stops
@@ -483,6 +484,7 @@ function updateGameStats() {
 // ── Multiple Choice Logic ──
 let currentBlankIdx = -1;
 let wrongGuesses = 0;
+let firstTryStations = []; // stations gotten right on first try this round
 
 function getDecoyStations(correctStation, count) {
   // Get decoys from the same line but not in the current slice
@@ -555,7 +557,10 @@ function handleChoice(btn, picked, correct) {
   guessCount++;
   if (picked === correct) {
     btn.classList.add('correct');
-    if (wrongGuesses === 0) filledByPlayer++; // only count if first try
+    if (wrongGuesses === 0) {
+      filledByPlayer++;
+      firstTryStations.push(stops[currentBlankIdx]);
+    }
     revealStop(currentBlankIdx, true);
     updateGameStats();
     setTimeout(() => advanceToNextBlank(), 500);
@@ -582,10 +587,14 @@ function endGame(gaveUp) {
   document.getElementById('choice-area').style.display = 'none';
 
   const totalBlanks = stops.length - anchorIndices.size;
-  const recallRate = totalBlanks > 0 ? filledByPlayer / totalBlanks : 1;
 
   // Save stats
-  saveGameStats(currentLineKey, guessCount, recallRate);
+  saveGameStats(currentLineKey);
+
+  // Compute line-wide recall from saved stats
+  const saved = loadStats().fill_the_line?.[currentLineKey] || {};
+  const lineRecall = saved.recall_rate || 0;
+  const knownCount = (saved.known_stations || []).length;
 
   // Show end screen after a moment
   setTimeout(() => {
@@ -595,8 +604,8 @@ function endGame(gaveUp) {
     document.getElementById('end-title').textContent = 'Complete!';
     document.getElementById('end-guesses').textContent = guessCount;
     document.getElementById('end-filled').textContent = filledByPlayer;
-    document.getElementById('end-total').textContent = stops.length - anchorIndices.size;
-    document.getElementById('end-recall').textContent = Math.round(recallRate * 100) + '%';
+    document.getElementById('end-total').textContent = totalBlanks;
+    document.getElementById('end-recall').textContent = knownCount + '/' + allStops.length + ' stations (' + Math.round(lineRecall * 100) + '%)';
 
     document.getElementById('play-again-btn').onclick = () => {
       startGame(currentLine, currentShuttle);
@@ -611,14 +620,19 @@ function loadStats() {
   } catch { return {}; }
 }
 
-function saveGameStats(lineKey, guesses, recallRate) {
+function saveGameStats(lineKey) {
   const stats = loadStats();
   if (!stats.fill_the_line) stats.fill_the_line = {};
-  const prev = stats.fill_the_line[lineKey] || { times_played: 0, best_score: Infinity, recall_rate: 0 };
+  const prev = stats.fill_the_line[lineKey] || { times_played: 0, known_stations: [] };
+  // Merge newly learned stations
+  const known = new Set(prev.known_stations || []);
+  for (const s of firstTryStations) known.add(s);
+  const knownArr = [...known];
+  const totalStops = allStops.length;
   stats.fill_the_line[lineKey] = {
     times_played: prev.times_played + 1,
-    best_score: Math.min(prev.best_score === Infinity ? guesses : prev.best_score, guesses),
-    recall_rate: Math.max(prev.recall_rate, recallRate)
+    known_stations: knownArr,
+    recall_rate: totalStops > 0 ? knownArr.length / totalStops : 0
   };
   stats.updated_at = new Date().toISOString();
   localStorage.setItem('subway_stats', JSON.stringify(stats));
