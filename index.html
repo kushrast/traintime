@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Subway</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -151,10 +153,10 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
   background: var(--yellow); box-shadow: 0 0 6px var(--yellow);
 }
 .context-toast {
-  position: fixed; bottom: 80px; left: 16px; right: 16px;
+  position: fixed; top: 60px; left: 16px; right: 16px;
   background: #222; border: 1px solid #444; border-radius: 10px;
   padding: 14px 16px; z-index: 20; max-width: 480px; margin: 0 auto;
-  animation: toastIn 0.3s ease;
+  animation: toastIn 0.3s ease; pointer-events: none;
 }
 .context-toast .ctx-station { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
 .context-toast .ctx-fact { font-size: 13px; color: var(--text-dim); line-height: 1.4; }
@@ -175,6 +177,44 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
 }
 .btn-primary { background: #fff; color: #000; }
 .btn-secondary { background: #333; color: #fff; }
+
+/* Mastery bar */
+.mastery-bar-container {
+  background: #333; border-radius: 6px; height: 10px; margin: 8px 0;
+  overflow: hidden;
+}
+.mastery-bar {
+  height: 100%; border-radius: 6px; transition: width 0.5s ease;
+  background: linear-gradient(90deg, var(--red), var(--yellow), var(--green));
+}
+.mastery-breakdown {
+  display: flex; gap: 12px; font-size: 12px; color: var(--text-muted);
+}
+.mastery-breakdown span { white-space: nowrap; }
+
+/* Progress screen */
+.progress-section { margin-bottom: 24px; }
+.progress-section h3 { font-size: 16px; margin-bottom: 12px; color: var(--text-dim); }
+.progress-line-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid #222;
+}
+.progress-line-item .line-badge { width: 32px; height: 32px; font-size: 14px; }
+.progress-line-item .line-info { flex: 1; }
+.progress-line-item .line-info .line-label { font-size: 14px; font-weight: 500; }
+.progress-line-item .line-info .line-pct { font-size: 12px; color: var(--text-muted); }
+.progress-line-item.locked { opacity: 0.35; }
+.progress-line-item .lock-hint { font-size: 11px; color: var(--text-muted); }
+.progress-mini-bar { width: 60px; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+.progress-mini-bar div { height: 100%; border-radius: 3px; }
+
+/* Session header */
+.session-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.session-progress { font-size: 13px; color: var(--text-dim); }
+.session-type { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
 /* Shuttle selector */
 .shuttle-list { list-style: none; margin-top: 12px; }
@@ -205,8 +245,8 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
   text-align: center; font-size: 14px; color: var(--yellow); margin-bottom: 20px;
 }
 .tq-line-grid {
-  display: grid; grid-template-columns: repeat(6, 1fr);
-  gap: 10px; justify-items: center; margin-bottom: 24px;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; justify-items: stretch; margin-bottom: 24px;
 }
 .tq-line-grid .line-badge {
   width: 48px; height: 48px; font-size: 20px; cursor: pointer;
@@ -237,6 +277,39 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
 }
 .tq-result.correct { color: var(--green); }
 .tq-result.incorrect { color: var(--red); }
+.tq-phase-label {
+  text-align: center; color: var(--text-dim); font-size: 15px;
+  margin-bottom: 16px; font-weight: 600;
+}
+.tq-group-btn {
+  display: flex; align-items: center; gap: 6px; padding: 10px 14px;
+  border-radius: 10px; cursor: pointer; border: 2px solid #333;
+  background: #1a1a1a; opacity: 0.6;
+  transition: transform 0.1s, border-color 0.15s, opacity 0.15s;
+}
+.tq-group-btn:active { transform: scale(0.95); }
+.tq-group-btn .tq-group-label {
+  font-size: 14px; font-weight: 600; color: #fff;
+}
+.tq-group-btn .tq-group-badges { display: flex; gap: 6px; }
+.tq-group-btn .tq-group-badges .line-badge {
+  width: 28px; height: 28px; font-size: 13px; flex-shrink: 0;
+}
+.tq-group-btn.selected { opacity: 1; border-color: #fff; }
+.tq-group-btn.tq-correct { opacity: 1; border-color: var(--green); }
+.tq-group-btn.tq-missed { opacity: 1; border-color: var(--red); }
+.tq-group-btn.tq-wrong { opacity: 0.3; border-color: var(--red); }
+.tq-group-btn .tq-group-detail {
+  font-size: 11px; color: var(--text-dim); margin-top: 2px;
+}
+.tq-bonus-area { margin-top: 20px; }
+
+/* Station Map */
+.station-map {
+  width: 100%; height: 180px; border-radius: 10px; margin-bottom: 16px;
+  overflow: hidden; border: 1px solid #333;
+}
+.station-map.hidden { display: none; }
 
 /* Neighborhood Mode */
 .nh-question {
@@ -262,30 +335,28 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
 </head>
 <body>
 
+<!-- Line Picker (first launch) -->
+<div id="line-picker" class="screen">
+  <h1 class="home-title">NYC Subway</h1>
+  <p class="home-subtitle">Pick your home line to start learning</p>
+  <div class="line-grid" id="picker-grid"></div>
+</div>
+
 <!-- Home Screen -->
-<div id="home" class="screen active">
+<div id="home" class="screen">
   <h1 class="home-title">NYC Subway</h1>
   <p class="home-subtitle">Learning the <span id="home-line-badge" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-weight:700;font-size:13px;vertical-align:middle;"></span> train</p>
 
-  <div class="game-card" onclick="playRandomLine()">
-    <h2>Fill the Line</h2>
-    <p>Name the stations on a random stretch of track. Fuzzy matching accepted.</p>
-    <div class="stat-line" id="ftl-stat">0 of 23 lines above 70%</div>
-    <button class="play-btn">Play</button>
+  <div class="stat-line" id="mastery-stat" style="margin-bottom:12px;"></div>
+  <div class="mastery-bar-container" id="mastery-bar-container">
+    <div class="mastery-bar" id="mastery-bar"></div>
   </div>
+  <div class="mastery-breakdown" id="mastery-breakdown"></div>
 
-  <div class="game-card" onclick="navigate('transfer-quiz')">
-    <h2>Transfer Quiz</h2>
-    <p>A station appears — tap all the subway lines that serve it.</p>
-    <div class="stat-line" id="tq-stat">0 transfer stations mastered</div>
-    <button class="play-btn">Play</button>
-  </div>
+  <button class="play-btn" style="margin-top:24px; padding:14px 48px; font-size:18px;" onclick="startMixedSession()">Next</button>
 
-  <div class="game-card" onclick="navigate('neighborhood')">
-    <h2>Neighborhood Mode</h2>
-    <p>Test your spatial knowledge — adjacent stops, boroughs, and station ordering.</p>
-    <div class="stat-line" id="nh-stat">0 questions answered</div>
-    <button class="play-btn">Play</button>
+  <div style="margin-top:24px;">
+    <a href="#/progress" style="color:var(--text-dim); font-size:13px; text-decoration:underline;">View progress & lines</a>
   </div>
 </div>
 
@@ -312,6 +383,7 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
     <span>Remaining: <strong id="remaining-count">0</strong></span>
     <span id="streak-display" style="display:none; color: #FCCC0A; font-weight: 700;"></span>
   </div>
+  <div class="station-map" id="game-map"></div>
   <ul class="stop-list" id="stop-list"></ul>
   <div class="choice-area" id="choice-area">
     <div class="choices" id="choices"></div>
@@ -340,7 +412,13 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
   <div class="tq-streak" id="tq-streak">Streak: 0</div>
   <div class="tq-station-name" id="tq-station-name"></div>
   <div class="tq-borough" id="tq-borough"></div>
+  <div class="station-map" id="tq-map"></div>
+  <div class="tq-phase-label" id="tq-phase-label">Which color lines stop here?</div>
   <div class="tq-line-grid" id="tq-line-grid"></div>
+  <div class="tq-bonus-area" id="tq-bonus-area" style="display:none;">
+    <div class="tq-phase-label">Bonus: which specific lines?</div>
+    <div class="tq-line-grid" id="tq-bonus-grid"></div>
+  </div>
   <button class="tq-submit" id="tq-submit-btn" onclick="tqSubmit()">Submit</button>
   <div class="tq-result" id="tq-result"></div>
 </div>
@@ -364,6 +442,7 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
   <div class="game-header"><div class="line-badge nh-line-badge" id="nh-line-badge"></div><div class="line-name">Neighborhood Mode</div></div>
   <div class="nh-progress" id="nh-progress">1 / 10</div>
   <div class="nh-score" id="nh-score">Score: 0 / 0</div>
+  <div class="station-map" id="nh-map"></div>
   <div class="nh-question" id="nh-question"></div>
   <div class="nh-choices" id="nh-choices"></div>
 </div>
@@ -380,17 +459,35 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
   </div>
 </div>
 
-<!-- Stats Placeholder -->
-<div id="stats" class="screen">
+<!-- Progress Screen -->
+<div id="progress" class="screen">
   <button class="back-btn" onclick="navigate('')">Home</button>
-  <div class="placeholder-msg">Stats Dashboard — coming soon</div>
+  <div class="game-header"><div class="line-badge" id="progress-line-badge"></div><div class="line-name" id="progress-line-name"></div></div>
+  <div class="progress-section" id="progress-mastery"></div>
+  <div class="progress-section" id="progress-lines"></div>
+</div>
+
+<!-- Mixed Session End -->
+<div id="session-end" class="screen">
+  <div class="end-screen">
+    <h2 id="session-end-title">Session Complete!</h2>
+    <div class="end-stat">Score: <span id="session-end-score">0</span> / <span id="session-end-total">10</span></div>
+    <div class="end-stat">Mastery: <span id="session-end-mastery">0%</span></div>
+    <div class="end-buttons">
+      <button class="btn-primary" onclick="startMixedSession()">Play Again</button>
+      <button class="btn-secondary" onclick="navigate('')">Home</button>
+    </div>
+  </div>
 </div>
 
 <script>
 // ── Subway Data ──
 const SUBWAY_DATA = {"lines":{"1":{"color":"#EE352E","stops":["Van Cortlandt Park-242 St","238 St","231 St","Marble Hill-225 St","215 St","207 St","Dyckman St","191 St","181 St","168 St-Washington Hts","157 St","145 St","137 St-City College","125 St","116 St-Columbia University","Cathedral Pkwy (110 St)","103 St","96 St","86 St","79 St","72 St","66 St-Lincoln Center","59 St-Columbus Circle","50 St","Times Sq-42 St","34 St-Penn Station","28 St","23 St","18 St","14 St","Christopher St-Stonewall","Houston St","Canal St","Franklin St","Chambers St","WTC Cortlandt","Rector St","South Ferry"]},"2":{"color":"#EE352E","stops":["Wakefield-241 St","Nereid Av","233 St","225 St","219 St","Gun Hill Rd","Burke Av","Allerton Av","Pelham Pkwy","Bronx Park East","E 180 St","West Farms Sq-E Tremont Av","174 St","Freeman St","Simpson St","Intervale Av","Prospect Av","Jackson Av","3 Av-149 St","149 St-Grand Concourse","135 St","125 St","116 St","110 St-Malcolm X Plaza","96 St","72 St","Times Sq-42 St","34 St-Penn Station","14 St","Chambers St","Park Place","Fulton St","Wall St","Clark St","Borough Hall","Hoyt St","Nevins St","Atlantic Av-Barclays Ctr","Bergen St","Grand Army Plaza","Eastern Pkwy-Brooklyn Museum","Franklin Av-Medgar Evers College","President St-Medgar Evers College","Sterling St","Winthrop St","Church Av","Beverly Rd","Newkirk Av-Little Haiti","Flatbush Av-Brooklyn College"]},"3":{"color":"#EE352E","stops":["Harlem-148 St","145 St","135 St","125 St","116 St","110 St-Malcolm X Plaza","96 St","72 St","Times Sq-42 St","34 St-Penn Station","14 St","Chambers St","Park Place","Fulton St","Wall St","Clark St","Borough Hall","Hoyt St","Nevins St","Atlantic Av-Barclays Ctr","Bergen St","Grand Army Plaza","Eastern Pkwy-Brooklyn Museum","Franklin Av-Medgar Evers College","Nostrand Av","Kingston Av","Crown Hts-Utica Av","Sutter Av-Rutland Rd","Saratoga Av","Rockaway Av","Junius St","Pennsylvania Av","Van Siclen Av","New Lots Av"]},"4":{"color":"#00933C","stops":["Woodlawn","Mosholu Pkwy","Bedford Park Blvd-Lehman College","Kingsbridge Rd","Fordham Rd","183 St","Burnside Av","176 St","Mt Eden Av","170 St","167 St","161 St-Yankee Stadium","149 St-Grand Concourse","138 St-Grand Concourse","125 St","86 St","59 St","Grand Central-42 St","14 St-Union Sq","Brooklyn Bridge-City Hall","Fulton St","Wall St","Bowling Green","Borough Hall","Nevins St","Atlantic Av-Barclays Ctr","Franklin Av-Medgar Evers College","Crown Hts-Utica Av"]},"5":{"color":"#00933C","stops":["Franklin Av-Medgar Evers College","President St-Medgar Evers College","Sterling St","Winthrop St","Church Av","Beverly Rd","Newkirk Av-Little Haiti","Flatbush Av-Brooklyn College","Atlantic Av-Barclays Ctr","Nevins St","Borough Hall","Bowling Green","Wall St","Fulton St","Brooklyn Bridge-City Hall","14 St-Union Sq","Grand Central-42 St","59 St","86 St","125 St","138 St-Grand Concourse","149 St-Grand Concourse","3 Av-149 St","Jackson Av","Prospect Av","Intervale Av","Simpson St","Freeman St","174 St","West Farms Sq-E Tremont Av","E 180 St","Bronx Park East","Morris Park","Pelham Pkwy","Gun Hill Rd","Burke Av","Allerton Av","Baychester Av","Eastchester-Dyre Av","Nereid Av","233 St","225 St","219 St"]},"6":{"color":"#00933C","stops":["Pelham Bay Park","Buhre Av","Middletown Rd","Westchester Sq-E Tremont Av","Zerega Av","Castle Hill Av","Parkchester","St Lawrence Av","Morrison Av-Soundview","Elder Av","Whitlock Av","Hunts Point Av","Longwood Av","E 149 St","E 143 St-St Mary's St","Cypress Av","Brook Av","3 Av-138 St","125 St","116 St","110 St","103 St","96 St","86 St","77 St","68 St-Hunter College","59 St","51 St","Grand Central-42 St","33 St","28 St","23 St-Baruch College","14 St-Union Sq","Astor Pl","Bleecker St","Spring St","Canal St","Brooklyn Bridge-City Hall"]},"7":{"color":"#B933AD","stops":["34 St-Hudson Yards","Times Sq-42 St","5 Av","Grand Central-42 St","Vernon Blvd-Jackson Av","Hunters Point Av","Court Sq","Queensboro Plaza","33 St-Rawson St","40 St-Lowery St","46 St-Bliss St","52 St","61 St-Woodside","69 St","74 St-Broadway","82 St-Jackson Hts","90 St-Elmhurst Av","Junction Blvd","103 St-Corona Plaza","111 St","Mets-Willets Point","Flushing-Main St"]},"A":{"color":"#0039A6","stops":["Far Rockaway-Mott Av","Beach 25 St","Beach 36 St","Beach 44 St","Beach 60 St","Beach 67 St","Broad Channel","Howard Beach-JFK Airport","Aqueduct-N Conduit Av","Aqueduct Racetrack","Rockaway Blvd","104 St","111 St","Ozone Park-Lefferts Blvd","88 St","80 St","Grant Av","Euclid Av","Broadway Junction","Utica Av","Nostrand Av","Hoyt-Schermerhorn Sts","Jay St-MetroTech","High St","Fulton St","Chambers St","Canal St","W 4 St-Wash Sq","14 St","34 St-Penn Station","42 St-Port Authority Bus Terminal","59 St-Columbus Circle","125 St","145 St","168 St","175 St","181 St","190 St","Dyckman St","Inwood-207 St","Rockaway Park-Beach 116 St","Beach 105 St","Beach 98 St","Beach 90 St"]},"B":{"color":"#FF6319","stops":["Bedford Park Blvd","Kingsbridge Rd","Fordham Rd","182-183 Sts","Tremont Av","174-175 Sts","170 St","167 St","161 St-Yankee Stadium","155 St","145 St","135 St","125 St","116 St","Cathedral Pkwy (110 St)","103 St","96 St","86 St","81 St-Museum of Natural History","72 St","59 St-Columbus Circle","7 Av","47-50 Sts-Rockefeller Ctr","42 St-Bryant Pk","34 St-Herald Sq","W 4 St-Wash Sq","Broadway-Lafayette St","Grand St","DeKalb Av","Atlantic Av-Barclays Ctr","7 Av","Prospect Park","Church Av","Newkirk Plaza","Kings Hwy","Sheepshead Bay","Brighton Beach"]},"C":{"color":"#0039A6","stops":["168 St","163 St-Amsterdam Av","155 St","145 St","135 St","125 St","116 St","Cathedral Pkwy (110 St)","103 St","96 St","86 St","81 St-Museum of Natural History","72 St","59 St-Columbus Circle","50 St","42 St-Port Authority Bus Terminal","34 St-Penn Station","23 St","14 St","W 4 St-Wash Sq","Spring St","Canal St","Chambers St","Fulton St","High St","Jay St-MetroTech","Hoyt-Schermerhorn Sts","Lafayette Av","Clinton-Washington Avs","Franklin Av","Nostrand Av","Kingston-Throop Avs","Utica Av","Ralph Av","Rockaway Av","Broadway Junction","Liberty Av","Van Siclen Av","Shepherd Av","Euclid Av"]},"D":{"color":"#FF6319","stops":["Norwood-205 St","Bedford Park Blvd","Kingsbridge Rd","Fordham Rd","182-183 Sts","Tremont Av","174-175 Sts","170 St","167 St","161 St-Yankee Stadium","155 St","145 St","125 St","59 St-Columbus Circle","7 Av","47-50 Sts-Rockefeller Ctr","42 St-Bryant Pk","34 St-Herald Sq","W 4 St-Wash Sq","Broadway-Lafayette St","Grand St","Atlantic Av-Barclays Ctr","36 St","9 Av","Fort Hamilton Pkwy","50 St","55 St","62 St","71 St","79 St","18 Av","20 Av","Bay Pkwy","25 Av","Bay 50 St","Coney Island-Stillwell Av"]},"E":{"color":"#0039A6","stops":["Jamaica Center-Parsons/Archer","Sutphin Blvd-Archer Av-JFK Airport","Jamaica-Van Wyck","Briarwood","Kew Gardens-Union Tpke","75 Av","Forest Hills-71 Av","Jackson Hts-Roosevelt Av","Queens Plaza","Court Sq-23 St","Lexington Av/53 St","5 Av/53 St","7 Av","50 St","42 St-Port Authority Bus Terminal","34 St-Penn Station","23 St","14 St","W 4 St-Wash Sq","Spring St","Canal St","World Trade Center"]},"F":{"color":"#FF6319","stops":["Jamaica-179 St","169 St","Parsons Blvd","Sutphin Blvd","Briarwood","Kew Gardens-Union Tpke","75 Av","Forest Hills-71 Av","Jackson Hts-Roosevelt Av","Queens Plaza","Court Sq-23 St","Lexington Av/53 St","5 Av/53 St","47-50 Sts-Rockefeller Ctr","42 St-Bryant Pk","34 St-Herald Sq","23 St","14 St","W 4 St-Wash Sq","Broadway-Lafayette St","2 Av","Delancey St-Essex St","East Broadway","York St","Jay St-MetroTech","Bergen St","Carroll St","Smith-9 Sts","4 Av-9 St","7 Av","15 St-Prospect Park","Fort Hamilton Pkwy","Church Av","Ditmas Av","18 Av","Avenue I","Bay Pkwy","Avenue N","Avenue P","Kings Hwy","Avenue U","Avenue X","Neptune Av","W 8 St-NY Aquarium","Coney Island-Stillwell Av"]},"G":{"color":"#6CBE45","stops":["Court Sq","21 St","Greenpoint Av","Nassau Av","Metropolitan Av","Broadway","Flushing Av","Myrtle-Willoughby Avs","Bedford-Nostrand Avs","Classon Av","Clinton-Washington Avs","Fulton St","Hoyt-Schermerhorn Sts","Bergen St","Carroll St","Smith-9 Sts","4 Av-9 St","7 Av","15 St-Prospect Park","Fort Hamilton Pkwy","Church Av"]},"J":{"color":"#996633","stops":["Jamaica Center-Parsons/Archer","Sutphin Blvd-Archer Av-JFK Airport","121 St","111 St","104 St","Woodhaven Blvd","85 St-Forest Pkwy","75 St-Elderts Ln","Cypress Hills","Crescent St","Norwood Av","Cleveland St","Van Siclen Av","Alabama Av","Broadway Junction","Chauncey St","Halsey St","Gates Av","Kosciuszko St","Myrtle Av","Flushing Av","Lorimer St","Hewes St","Marcy Av","Delancey St-Essex St","Bowery","Canal St","Chambers St","Fulton St","Broad St"]},"L":{"color":"#A7A9AC","stops":["Canarsie-Rockaway Pkwy","East 105 St","New Lots Av","Livonia Av","Sutter Av","Atlantic Av","Broadway Junction","Bushwick Av-Aberdeen St","Wilson Av","Halsey St","Myrtle-Wyckoff Avs","DeKalb Av","Jefferson St","Morgan Av","Montrose Av","Grand St","Graham Av","Lorimer St","Bedford Av","1 Av","3 Av","14 St-Union Sq","6 Av","8 Av"]},"M":{"color":"#FF6319","stops":["Forest Hills-71 Av","67 Av","63 Dr-Rego Park","Woodhaven Blvd","Grand Av-Newtown","Elmhurst Av","Jackson Hts-Roosevelt Av","65 St","Northern Blvd","46 St","Steinway St","36 St","21 St-Queensbridge","Roosevelt Island","Lexington Av/63 St","57 St","47-50 Sts-Rockefeller Ctr","42 St-Bryant Pk","34 St-Herald Sq","23 St","14 St","W 4 St-Wash Sq","Broadway-Lafayette St","Delancey St-Essex St","Marcy Av","Hewes St","Lorimer St","Flushing Av","Myrtle Av","Central Av","Knickerbocker Av","Myrtle-Wyckoff Avs","Seneca Av","Forest Av","Fresh Pond Rd","Middle Village-Metropolitan Av"]},"N":{"color":"#FCCC0A","stops":["Astoria-Ditmars Blvd","Astoria Blvd","30 Av","Broadway","36 Av","39 Av-Dutch Kills","Queensboro Plaza","Lexington Av/59 St","5 Av/59 St","57 St-7 Av","49 St","Times Sq-42 St","34 St-Herald Sq","14 St-Union Sq","Canal St","Atlantic Av-Barclays Ctr","36 St","59 St","8 Av","Fort Hamilton Pkwy","New Utrecht Av","18 Av","20 Av","Bay Pkwy","Kings Hwy","Avenue U","86 St","Coney Island-Stillwell Av"]},"Q":{"color":"#FCCC0A","stops":["96 St","86 St","72 St","Lexington Av/63 St","57 St-7 Av","Times Sq-42 St","34 St-Herald Sq","14 St-Union Sq","Canal St","DeKalb Av","Atlantic Av-Barclays Ctr","7 Av","Prospect Park","Parkside Av","Church Av","Beverley Rd","Cortelyou Rd","Newkirk Plaza","Avenue H","Avenue J","Avenue M","Kings Hwy","Avenue U","Neck Rd","Sheepshead Bay","Brighton Beach","Ocean Pkwy","W 8 St-NY Aquarium","Coney Island-Stillwell Av"]},"R":{"color":"#FCCC0A","stops":["Forest Hills-71 Av","67 Av","63 Dr-Rego Park","Woodhaven Blvd","Grand Av-Newtown","Elmhurst Av","Jackson Hts-Roosevelt Av","65 St","Northern Blvd","46 St","Steinway St","36 St","Queens Plaza","Lexington Av/59 St","5 Av/59 St","57 St-7 Av","49 St","Times Sq-42 St","34 St-Herald Sq","28 St","23 St","14 St-Union Sq","8 St-NYU","Prince St","Canal St","City Hall","Cortlandt St","Rector St","Whitehall St-South Ferry","Court St","Jay St-MetroTech","DeKalb Av","Atlantic Av-Barclays Ctr","Union St","4 Av-9 St","Prospect Av","25 St","36 St","45 St","53 St","59 St","Bay Ridge Av","77 St","86 St","Bay Ridge-95 St"]},"W":{"color":"#FCCC0A","stops":["Whitehall St-South Ferry","Rector St","Cortlandt St","City Hall","Canal St","Prince St","8 St-NYU","14 St-Union Sq","23 St","28 St","34 St-Herald Sq","Times Sq-42 St","49 St","57 St-7 Av","5 Av/59 St","Lexington Av/59 St","Queensboro Plaza","39 Av-Dutch Kills","36 Av","Broadway","30 Av","Astoria Blvd","Astoria-Ditmars Blvd"]},"Z":{"color":"#996633","stops":["Jamaica Center-Parsons/Archer","Sutphin Blvd-Archer Av-JFK Airport","121 St","104 St","Woodhaven Blvd","75 St-Elderts Ln","Crescent St","Norwood Av","Van Siclen Av","Alabama Av","Broadway Junction","Chauncey St","Gates Av","Myrtle Av","Marcy Av","Delancey St-Essex St","Bowery","Canal St","Chambers St","Fulton St","Broad St"]},"S":{"color":"#808183","shuttles":[{"name":"Rockaway Park Shuttle","stops":["Broad Channel","Beach 90 St","Beach 98 St","Beach 105 St","Rockaway Park-Beach 116 St"]},{"name":"Franklin Av Shuttle","stops":["Franklin Av","Park Pl","Botanic Garden","Prospect Park"]},{"name":"42 St Shuttle","stops":["Grand Central-42 St","Times Sq-42 St"]}]}},"stations":{"Van Cortlandt Park-242 St":{"lines":["1"],"borough":"Bronx"},"238 St":{"lines":["1"],"borough":"Bronx"},"231 St":{"lines":["1"],"borough":"Bronx"},"Marble Hill-225 St":{"lines":["1"],"borough":"Manhattan"},"215 St":{"lines":["1"],"borough":"Bronx"},"207 St":{"lines":["1"],"borough":"Bronx"},"Dyckman St":{"lines":["1","A"],"borough":"Manhattan"},"191 St":{"lines":["1"],"borough":"Bronx"},"181 St":{"lines":["1","A"],"borough":"Bronx"},"168 St-Washington Hts":{"lines":["1"],"borough":"Bronx"},"157 St":{"lines":["1"],"borough":"Bronx"},"145 St":{"lines":["1","3","A","B","C","D"],"borough":"Bronx"},"137 St-City College":{"lines":["1"],"borough":"Bronx"},"125 St":{"lines":["1","2","3","4","5","6","A","B","C","D"],"borough":"Manhattan"},"116 St-Columbia University":{"lines":["1"],"borough":"Manhattan"},"Cathedral Pkwy (110 St)":{"lines":["1","B","C"],"borough":"Manhattan"},"103 St":{"lines":["1","6","B","C"],"borough":"Manhattan"},"96 St":{"lines":["1","2","3","6","B","C","Q"],"borough":"Manhattan"},"86 St":{"lines":["1","4","5","6","B","C","N","Q","R"],"borough":"Manhattan"},"79 St":{"lines":["1","D"],"borough":"Manhattan"},"72 St":{"lines":["1","2","3","B","C","Q"],"borough":"Manhattan"},"66 St-Lincoln Center":{"lines":["1"],"borough":"Manhattan"},"59 St-Columbus Circle":{"lines":["1","A","B","C","D"],"borough":"Manhattan"},"50 St":{"lines":["1","C","D","E"],"borough":"Manhattan"},"Times Sq-42 St":{"lines":["1","2","3","7","N","Q","R","S","W"],"borough":"Manhattan"},"34 St-Penn Station":{"lines":["1","2","3","A","C","E"],"borough":"Manhattan"},"28 St":{"lines":["1","6","R","W"],"borough":"Manhattan"},"23 St":{"lines":["1","C","E","F","M","R","W"],"borough":"Manhattan"},"18 St":{"lines":["1"],"borough":"Manhattan"},"14 St":{"lines":["1","2","3","A","C","E","F","M"],"borough":"Manhattan"},"Christopher St-Stonewall":{"lines":["1"],"borough":"Manhattan"},"Houston St":{"lines":["1"],"borough":"Manhattan"},"Canal St":{"lines":["1","6","A","C","E","J","N","Q","R","W","Z"],"borough":"Manhattan"},"Franklin St":{"lines":["1"],"borough":"Manhattan"},"Chambers St":{"lines":["1","2","3","A","C","J","Z"],"borough":"Manhattan"},"WTC Cortlandt":{"lines":["1"],"borough":"Manhattan"},"Rector St":{"lines":["1","R","W"],"borough":"Manhattan"},"South Ferry":{"lines":["1"],"borough":"Manhattan"},"Wakefield-241 St":{"lines":["2"],"borough":"Bronx"},"Nereid Av":{"lines":["2","5"],"borough":"Bronx"},"233 St":{"lines":["2","5"],"borough":"Bronx"},"225 St":{"lines":["2","5"],"borough":"Bronx"},"219 St":{"lines":["2","5"],"borough":"Bronx"},"Gun Hill Rd":{"lines":["2","5"],"borough":"Bronx"},"Burke Av":{"lines":["2","5"],"borough":"Bronx"},"Allerton Av":{"lines":["2","5"],"borough":"Bronx"},"Pelham Pkwy":{"lines":["2","5"],"borough":"Bronx"},"Bronx Park East":{"lines":["2","5"],"borough":"Bronx"},"E 180 St":{"lines":["2","5"],"borough":"Bronx"},"West Farms Sq-E Tremont Av":{"lines":["2","5"],"borough":"Bronx"},"174 St":{"lines":["2","5"],"borough":"Bronx"},"Freeman St":{"lines":["2","5"],"borough":"Bronx"},"Simpson St":{"lines":["2","5"],"borough":"Bronx"},"Intervale Av":{"lines":["2","5"],"borough":"Bronx"},"Prospect Av":{"lines":["2","5","R"],"borough":"Bronx"},"Jackson Av":{"lines":["2","5"],"borough":"Bronx"},"3 Av-149 St":{"lines":["2","5"],"borough":"Bronx"},"149 St-Grand Concourse":{"lines":["2","4","5"],"borough":"Bronx"},"135 St":{"lines":["2","3","B","C"],"borough":"Manhattan"},"116 St":{"lines":["2","3","6","B","C"],"borough":"Manhattan"},"110 St-Malcolm X Plaza":{"lines":["2","3"],"borough":"Manhattan"},"Park Place":{"lines":["2","3"],"borough":"Brooklyn"},"Fulton St":{"lines":["2","3","4","5","A","C","G","J","Z"],"borough":"Manhattan"},"Wall St":{"lines":["2","3","4","5"],"borough":"Manhattan"},"Clark St":{"lines":["2","3"],"borough":"Brooklyn"},"Borough Hall":{"lines":["2","3","4","5"],"borough":"Brooklyn"},"Hoyt St":{"lines":["2","3"],"borough":"Brooklyn"},"Nevins St":{"lines":["2","3","4","5"],"borough":"Brooklyn"},"Atlantic Av-Barclays Ctr":{"lines":["2","3","4","5","B","D","N","Q","R"],"borough":"Brooklyn"},"Bergen St":{"lines":["2","3","F","G"],"borough":"Brooklyn"},"Grand Army Plaza":{"lines":["2","3"],"borough":"Brooklyn"},"Eastern Pkwy-Brooklyn Museum":{"lines":["2","3"],"borough":"Brooklyn"},"Franklin Av-Medgar Evers College":{"lines":["2","3","4","5"],"borough":"Brooklyn"},"Nostrand Av":{"lines":["3","A","C"],"borough":"Brooklyn"},"Kingston Av":{"lines":["3"],"borough":"Brooklyn"},"Crown Hts-Utica Av":{"lines":["3","4"],"borough":"Brooklyn"},"Sutter Av-Rutland Rd":{"lines":["3"],"borough":"Brooklyn"},"Saratoga Av":{"lines":["3"],"borough":"Brooklyn"},"Rockaway Av":{"lines":["3","C"],"borough":"Brooklyn"},"Junius St":{"lines":["3"],"borough":"Brooklyn"},"Pennsylvania Av":{"lines":["3"],"borough":"Brooklyn"},"Van Siclen Av":{"lines":["3","C","J","Z"],"borough":"Brooklyn"},"New Lots Av":{"lines":["3","L"],"borough":"Brooklyn"},"President St-Medgar Evers College":{"lines":["2","5"],"borough":"Brooklyn"},"Sterling St":{"lines":["2","5"],"borough":"Brooklyn"},"Winthrop St":{"lines":["2","5"],"borough":"Brooklyn"},"Church Av":{"lines":["2","5","B","F","G","Q"],"borough":"Brooklyn"},"Beverly Rd":{"lines":["2","5"],"borough":"Brooklyn"},"Newkirk Av-Little Haiti":{"lines":["2","5"],"borough":"Brooklyn"},"Flatbush Av-Brooklyn College":{"lines":["2","5"],"borough":"Brooklyn"},"Harlem-148 St":{"lines":["3"],"borough":"Manhattan"},"Woodlawn":{"lines":["4"],"borough":"Bronx"},"Mosholu Pkwy":{"lines":["4"],"borough":"Bronx"},"Bedford Park Blvd-Lehman College":{"lines":["4"],"borough":"Bronx"},"Kingsbridge Rd":{"lines":["4","B","D"],"borough":"Bronx"},"Fordham Rd":{"lines":["4","B","D"],"borough":"Bronx"},"183 St":{"lines":["4"],"borough":"Bronx"},"Burnside Av":{"lines":["4"],"borough":"Bronx"},"176 St":{"lines":["4"],"borough":"Bronx"},"Mt Eden Av":{"lines":["4"],"borough":"Bronx"},"170 St":{"lines":["4","B","D"],"borough":"Bronx"},"167 St":{"lines":["4","B","D"],"borough":"Bronx"},"161 St-Yankee Stadium":{"lines":["4","B","D"],"borough":"Bronx"},"138 St-Grand Concourse":{"lines":["4","5"],"borough":"Bronx"},"110 St":{"lines":["6"],"borough":"Manhattan"},"77 St":{"lines":["6","R"],"borough":"Manhattan"},"68 St-Hunter College":{"lines":["6"],"borough":"Manhattan"},"59 St":{"lines":["4","5","6","N","R"],"borough":"Manhattan"},"51 St":{"lines":["6"],"borough":"Manhattan"},"Grand Central-42 St":{"lines":["4","5","6","7","S"],"borough":"Manhattan"},"33 St":{"lines":["6"],"borough":"Manhattan"},"23 St-Baruch College":{"lines":["6"],"borough":"Manhattan"},"14 St-Union Sq":{"lines":["4","5","6","L","N","Q","R","W"],"borough":"Manhattan"},"Astor Pl":{"lines":["6"],"borough":"Manhattan"},"Bleecker St":{"lines":["6"],"borough":"Manhattan"},"Spring St":{"lines":["6","C","E"],"borough":"Manhattan"},"Brooklyn Bridge-City Hall":{"lines":["4","5","6"],"borough":"Manhattan"},"Bowling Green":{"lines":["4","5"],"borough":"Manhattan"},"Morris Park":{"lines":["5"],"borough":"Bronx"},"Baychester Av":{"lines":["5"],"borough":"Bronx"},"Eastchester-Dyre Av":{"lines":["5"],"borough":"Bronx"},"Pelham Bay Park":{"lines":["6"],"borough":"Bronx"},"Buhre Av":{"lines":["6"],"borough":"Bronx"},"Middletown Rd":{"lines":["6"],"borough":"Bronx"},"Westchester Sq-E Tremont Av":{"lines":["6"],"borough":"Bronx"},"Zerega Av":{"lines":["6"],"borough":"Bronx"},"Castle Hill Av":{"lines":["6"],"borough":"Bronx"},"Parkchester":{"lines":["6"],"borough":"Bronx"},"St Lawrence Av":{"lines":["6"],"borough":"Bronx"},"Morrison Av-Soundview":{"lines":["6"],"borough":"Bronx"},"Elder Av":{"lines":["6"],"borough":"Bronx"},"Whitlock Av":{"lines":["6"],"borough":"Bronx"},"Hunts Point Av":{"lines":["6"],"borough":"Bronx"},"Longwood Av":{"lines":["6"],"borough":"Bronx"},"E 149 St":{"lines":["6"],"borough":"Bronx"},"E 143 St-St Mary's St":{"lines":["6"],"borough":"Bronx"},"Cypress Av":{"lines":["6"],"borough":"Bronx"},"Brook Av":{"lines":["6"],"borough":"Bronx"},"3 Av-138 St":{"lines":["6"],"borough":"Bronx"},"34 St-Hudson Yards":{"lines":["7"],"borough":"Manhattan"},"5 Av":{"lines":["7"],"borough":"Manhattan"},"Vernon Blvd-Jackson Av":{"lines":["7"],"borough":"Queens"},"Hunters Point Av":{"lines":["7"],"borough":"Queens"},"Court Sq":{"lines":["7","G"],"borough":"Queens"},"Queensboro Plaza":{"lines":["7","N","W"],"borough":"Manhattan"},"33 St-Rawson St":{"lines":["7"],"borough":"Brooklyn"},"40 St-Lowery St":{"lines":["7"],"borough":"Brooklyn"},"46 St-Bliss St":{"lines":["7"],"borough":"Brooklyn"},"52 St":{"lines":["7"],"borough":"Brooklyn"},"61 St-Woodside":{"lines":["7"],"borough":"Queens"},"69 St":{"lines":["7"],"borough":"Queens"},"74 St-Broadway":{"lines":["7"],"borough":"Brooklyn"},"82 St-Jackson Hts":{"lines":["7"],"borough":"Queens"},"90 St-Elmhurst Av":{"lines":["7"],"borough":"Queens"},"Junction Blvd":{"lines":["7"],"borough":"Queens"},"103 St-Corona Plaza":{"lines":["7"],"borough":"Queens"},"111 St":{"lines":["7","A","J"],"borough":"Queens"},"Mets-Willets Point":{"lines":["7"],"borough":"Queens"},"Flushing-Main St":{"lines":["7"],"borough":"Queens"},"Far Rockaway-Mott Av":{"lines":["A"],"borough":"Queens"},"Beach 25 St":{"lines":["A"],"borough":"Queens"},"Beach 36 St":{"lines":["A"],"borough":"Queens"},"Beach 44 St":{"lines":["A"],"borough":"Queens"},"Beach 60 St":{"lines":["A"],"borough":"Queens"},"Beach 67 St":{"lines":["A"],"borough":"Queens"},"Broad Channel":{"lines":["A","S"],"borough":"Queens"},"Howard Beach-JFK Airport":{"lines":["A"],"borough":"Queens"},"Aqueduct-N Conduit Av":{"lines":["A"],"borough":"Queens"},"Aqueduct Racetrack":{"lines":["A"],"borough":"Queens"},"Rockaway Blvd":{"lines":["A"],"borough":"Queens"},"104 St":{"lines":["A","J","Z"],"borough":"Queens"},"Ozone Park-Lefferts Blvd":{"lines":["A"],"borough":"Queens"},"88 St":{"lines":["A"],"borough":"Queens"},"80 St":{"lines":["A"],"borough":"Queens"},"Grant Av":{"lines":["A"],"borough":"Brooklyn"},"Euclid Av":{"lines":["A","C"],"borough":"Brooklyn"},"Shepherd Av":{"lines":["C"],"borough":"Brooklyn"},"Liberty Av":{"lines":["C"],"borough":"Brooklyn"},"Broadway Junction":{"lines":["A","C","J","L","Z"],"borough":"Brooklyn"},"Ralph Av":{"lines":["C"],"borough":"Brooklyn"},"Utica Av":{"lines":["A","C"],"borough":"Brooklyn"},"Kingston-Throop Avs":{"lines":["C"],"borough":"Brooklyn"},"Franklin Av":{"lines":["C","S"],"borough":"Brooklyn"},"Clinton-Washington Avs":{"lines":["C","G"],"borough":"Brooklyn"},"Lafayette Av":{"lines":["C"],"borough":"Brooklyn"},"Hoyt-Schermerhorn Sts":{"lines":["A","C","G"],"borough":"Brooklyn"},"Jay St-MetroTech":{"lines":["A","C","F","R"],"borough":"Brooklyn"},"High St":{"lines":["A","C"],"borough":"Brooklyn"},"W 4 St-Wash Sq":{"lines":["A","B","C","D","E","F","M"],"borough":"Manhattan"},"42 St-Port Authority Bus Terminal":{"lines":["A","C","E"],"borough":"Manhattan"},"81 St-Museum of Natural History":{"lines":["B","C"],"borough":"Manhattan"},"155 St":{"lines":["B","C","D"],"borough":"Bronx"},"163 St-Amsterdam Av":{"lines":["C"],"borough":"Bronx"},"168 St":{"lines":["A","C"],"borough":"Bronx"},"175 St":{"lines":["A"],"borough":"Bronx"},"190 St":{"lines":["A"],"borough":"Bronx"},"Inwood-207 St":{"lines":["A"],"borough":"Manhattan"},"Rockaway Park-Beach 116 St":{"lines":["A","S"],"borough":"Queens"},"Beach 105 St":{"lines":["A","S"],"borough":"Queens"},"Beach 98 St":{"lines":["A","S"],"borough":"Queens"},"Beach 90 St":{"lines":["A","S"],"borough":"Queens"},"Bedford Park Blvd":{"lines":["B","D"],"borough":"Bronx"},"182-183 Sts":{"lines":["B","D"],"borough":"Bronx"},"Tremont Av":{"lines":["B","D"],"borough":"Bronx"},"174-175 Sts":{"lines":["B","D"],"borough":"Bronx"},"7 Av":{"lines":["B","D","E","F","G","Q"],"borough":"Manhattan"},"47-50 Sts-Rockefeller Ctr":{"lines":["B","D","F","M"],"borough":"Manhattan"},"42 St-Bryant Pk":{"lines":["B","D","F","M"],"borough":"Manhattan"},"34 St-Herald Sq":{"lines":["B","D","F","M","N","Q","R","W"],"borough":"Manhattan"},"Broadway-Lafayette St":{"lines":["B","D","F","M"],"borough":"Manhattan"},"Grand St":{"lines":["B","D","L"],"borough":"Brooklyn"},"DeKalb Av":{"lines":["B","L","Q","R"],"borough":"Brooklyn"},"Prospect Park":{"lines":["B","Q","S"],"borough":"Brooklyn"},"Newkirk Plaza":{"lines":["B","Q"],"borough":"Brooklyn"},"Kings Hwy":{"lines":["B","F","N","Q"],"borough":"Brooklyn"},"Sheepshead Bay":{"lines":["B","Q"],"borough":"Brooklyn"},"Brighton Beach":{"lines":["B","Q"],"borough":"Brooklyn"},"Norwood-205 St":{"lines":["D"],"borough":"Bronx"},"Union St":{"lines":["R"],"borough":"Brooklyn"},"4 Av-9 St":{"lines":["F","G","R"],"borough":"Brooklyn"},"25 St":{"lines":["R"],"borough":"Brooklyn"},"36 St":{"lines":["D","M","N","R"],"borough":"Brooklyn"},"9 Av":{"lines":["D"],"borough":"Brooklyn"},"Fort Hamilton Pkwy":{"lines":["D","F","G","N"],"borough":"Brooklyn"},"55 St":{"lines":["D"],"borough":"Brooklyn"},"62 St":{"lines":["D"],"borough":"Brooklyn"},"71 St":{"lines":["D"],"borough":"Brooklyn"},"18 Av":{"lines":["D","F","N"],"borough":"Brooklyn"},"20 Av":{"lines":["D","N"],"borough":"Brooklyn"},"Bay Pkwy":{"lines":["D","F","N"],"borough":"Brooklyn"},"25 Av":{"lines":["D"],"borough":"Brooklyn"},"Bay 50 St":{"lines":["D"],"borough":"Brooklyn"},"Coney Island-Stillwell Av":{"lines":["D","F","N","Q"],"borough":"Brooklyn"},"Jamaica Center-Parsons/Archer":{"lines":["E","J","Z"],"borough":"Queens"},"Sutphin Blvd-Archer Av-JFK Airport":{"lines":["E","J","Z"],"borough":"Queens"},"Jamaica-Van Wyck":{"lines":["E"],"borough":"Queens"},"Briarwood":{"lines":["E","F"],"borough":"Queens"},"Sutphin Blvd":{"lines":["F"],"borough":"Queens"},"Parsons Blvd":{"lines":["F"],"borough":"Queens"},"169 St":{"lines":["F"],"borough":"Queens"},"Jamaica-179 St":{"lines":["F"],"borough":"Queens"},"Kew Gardens-Union Tpke":{"lines":["E","F"],"borough":"Queens"},"75 Av":{"lines":["E","F"],"borough":"Queens"},"Forest Hills-71 Av":{"lines":["E","F","M","R"],"borough":"Queens"},"67 Av":{"lines":["M","R"],"borough":"Queens"},"63 Dr-Rego Park":{"lines":["M","R"],"borough":"Queens"},"Woodhaven Blvd":{"lines":["J","M","R","Z"],"borough":"Queens"},"Grand Av-Newtown":{"lines":["M","R"],"borough":"Queens"},"Elmhurst Av":{"lines":["M","R"],"borough":"Queens"},"Jackson Hts-Roosevelt Av":{"lines":["E","F","M","R"],"borough":"Queens"},"65 St":{"lines":["M","R"],"borough":"Queens"},"Northern Blvd":{"lines":["M","R"],"borough":"Queens"},"46 St":{"lines":["M","R"],"borough":"Brooklyn"},"Steinway St":{"lines":["M","R"],"borough":"Queens"},"Queens Plaza":{"lines":["E","F","R"],"borough":"Queens"},"Court Sq-23 St":{"lines":["E","F"],"borough":"Brooklyn"},"Lexington Av/53 St":{"lines":["E","F"],"borough":"Manhattan"},"5 Av/53 St":{"lines":["E","F"],"borough":"Manhattan"},"World Trade Center":{"lines":["E"],"borough":"Manhattan"},"21 St-Queensbridge":{"lines":["M"],"borough":"Manhattan"},"Roosevelt Island":{"lines":["M"],"borough":"Manhattan"},"Lexington Av/63 St":{"lines":["M","Q"],"borough":"Manhattan"},"57 St":{"lines":["M"],"borough":"Manhattan"},"2 Av":{"lines":["F"],"borough":"Manhattan"},"Delancey St-Essex St":{"lines":["F","J","M","Z"],"borough":"Manhattan"},"East Broadway":{"lines":["F"],"borough":"Manhattan"},"York St":{"lines":["F"],"borough":"Brooklyn"},"Carroll St":{"lines":["F","G"],"borough":"Brooklyn"},"Smith-9 Sts":{"lines":["F","G"],"borough":"Brooklyn"},"15 St-Prospect Park":{"lines":["F","G"],"borough":"Brooklyn"},"Ditmas Av":{"lines":["F"],"borough":"Brooklyn"},"Avenue I":{"lines":["F"],"borough":"Brooklyn"},"Avenue N":{"lines":["F"],"borough":"Brooklyn"},"Avenue P":{"lines":["F"],"borough":"Brooklyn"},"Avenue U":{"lines":["F","N","Q"],"borough":"Brooklyn"},"Avenue X":{"lines":["F"],"borough":"Brooklyn"},"Neptune Av":{"lines":["F"],"borough":"Brooklyn"},"W 8 St-NY Aquarium":{"lines":["F","Q"],"borough":"Brooklyn"},"21 St":{"lines":["G"],"borough":"Brooklyn"},"Greenpoint Av":{"lines":["G"],"borough":"Brooklyn"},"Nassau Av":{"lines":["G"],"borough":"Brooklyn"},"Metropolitan Av":{"lines":["G"],"borough":"Brooklyn"},"Broadway":{"lines":["G","N","W"],"borough":"Brooklyn"},"Flushing Av":{"lines":["G","J","M"],"borough":"Brooklyn"},"Myrtle-Willoughby Avs":{"lines":["G"],"borough":"Brooklyn"},"Bedford-Nostrand Avs":{"lines":["G"],"borough":"Brooklyn"},"Classon Av":{"lines":["G"],"borough":"Brooklyn"},"121 St":{"lines":["J","Z"],"borough":"Queens"},"85 St-Forest Pkwy":{"lines":["J"],"borough":"Queens"},"75 St-Elderts Ln":{"lines":["J","Z"],"borough":"Queens"},"Cypress Hills":{"lines":["J"],"borough":"Brooklyn"},"Crescent St":{"lines":["J","Z"],"borough":"Brooklyn"},"Norwood Av":{"lines":["J","Z"],"borough":"Brooklyn"},"Cleveland St":{"lines":["J"],"borough":"Brooklyn"},"Alabama Av":{"lines":["J","Z"],"borough":"Brooklyn"},"Chauncey St":{"lines":["J","Z"],"borough":"Brooklyn"},"Halsey St":{"lines":["J","L"],"borough":"Brooklyn"},"Gates Av":{"lines":["J","Z"],"borough":"Brooklyn"},"Kosciuszko St":{"lines":["J"],"borough":"Brooklyn"},"Myrtle Av":{"lines":["J","M","Z"],"borough":"Brooklyn"},"Lorimer St":{"lines":["J","L","M"],"borough":"Brooklyn"},"Hewes St":{"lines":["J","M"],"borough":"Brooklyn"},"Marcy Av":{"lines":["J","M","Z"],"borough":"Brooklyn"},"Bowery":{"lines":["J","Z"],"borough":"Manhattan"},"Broad St":{"lines":["J","Z"],"borough":"Manhattan"},"Canarsie-Rockaway Pkwy":{"lines":["L"],"borough":"Brooklyn"},"East 105 St":{"lines":["L"],"borough":"Brooklyn"},"Livonia Av":{"lines":["L"],"borough":"Brooklyn"},"Sutter Av":{"lines":["L"],"borough":"Brooklyn"},"Atlantic Av":{"lines":["L"],"borough":"Brooklyn"},"Bushwick Av-Aberdeen St":{"lines":["L"],"borough":"Brooklyn"},"Wilson Av":{"lines":["L"],"borough":"Brooklyn"},"Myrtle-Wyckoff Avs":{"lines":["L","M"],"borough":"Brooklyn"},"Jefferson St":{"lines":["L"],"borough":"Brooklyn"},"Morgan Av":{"lines":["L"],"borough":"Brooklyn"},"Montrose Av":{"lines":["L"],"borough":"Brooklyn"},"Graham Av":{"lines":["L"],"borough":"Brooklyn"},"Bedford Av":{"lines":["L"],"borough":"Brooklyn"},"1 Av":{"lines":["L"],"borough":"Manhattan"},"3 Av":{"lines":["L"],"borough":"Manhattan"},"6 Av":{"lines":["L"],"borough":"Manhattan"},"8 Av":{"lines":["L","N"],"borough":"Manhattan"},"Central Av":{"lines":["M"],"borough":"Brooklyn"},"Knickerbocker Av":{"lines":["M"],"borough":"Brooklyn"},"Seneca Av":{"lines":["M"],"borough":"Queens"},"Forest Av":{"lines":["M"],"borough":"Queens"},"Fresh Pond Rd":{"lines":["M"],"borough":"Brooklyn"},"Middle Village-Metropolitan Av":{"lines":["M"],"borough":"Queens"},"Astoria-Ditmars Blvd":{"lines":["N","W"],"borough":"Queens"},"Astoria Blvd":{"lines":["N","W"],"borough":"Queens"},"30 Av":{"lines":["N","W"],"borough":"Brooklyn"},"36 Av":{"lines":["N","W"],"borough":"Brooklyn"},"39 Av-Dutch Kills":{"lines":["N","W"],"borough":"Queens"},"Lexington Av/59 St":{"lines":["N","R","W"],"borough":"Manhattan"},"5 Av/59 St":{"lines":["N","R","W"],"borough":"Manhattan"},"57 St-7 Av":{"lines":["N","Q","R","W"],"borough":"Manhattan"},"49 St":{"lines":["N","R","W"],"borough":"Manhattan"},"8 St-NYU":{"lines":["R","W"],"borough":"Manhattan"},"Prince St":{"lines":["R","W"],"borough":"Manhattan"},"City Hall":{"lines":["R","W"],"borough":"Manhattan"},"Cortlandt St":{"lines":["R","W"],"borough":"Manhattan"},"Whitehall St-South Ferry":{"lines":["R","W"],"borough":"Brooklyn"},"Court St":{"lines":["R"],"borough":"Brooklyn"},"45 St":{"lines":["R"],"borough":"Brooklyn"},"53 St":{"lines":["R"],"borough":"Brooklyn"},"New Utrecht Av":{"lines":["N"],"borough":"Brooklyn"},"Parkside Av":{"lines":["Q"],"borough":"Brooklyn"},"Beverley Rd":{"lines":["Q"],"borough":"Brooklyn"},"Cortelyou Rd":{"lines":["Q"],"borough":"Brooklyn"},"Avenue H":{"lines":["Q"],"borough":"Brooklyn"},"Avenue J":{"lines":["Q"],"borough":"Brooklyn"},"Avenue M":{"lines":["Q"],"borough":"Brooklyn"},"Neck Rd":{"lines":["Q"],"borough":"Brooklyn"},"Ocean Pkwy":{"lines":["Q"],"borough":"Brooklyn"},"Bay Ridge Av":{"lines":["R"],"borough":"Brooklyn"},"Bay Ridge-95 St":{"lines":["R"],"borough":"Brooklyn"},"Park Pl":{"lines":["S"],"borough":"Manhattan"},"Botanic Garden":{"lines":["S"],"borough":"Brooklyn"}}};
 
-const STATION_CONTEXT = {"1 Av":"East Village at 1st Avenue and 14th Street, near Stuyvesant Town.","103 St":"Upper Manhattan border of East and West sides, near Central Park North.","103 St-Corona Plaza":"Heart of Corona, Queens \u2014 large Latino community and lively plaza.","104 St":"Ozone Park, Queens \u2014 residential neighborhood near Liberty Avenue.","110 St":"East Harlem at Lexington Avenue, near Mount Sinai Hospital.","110 St-Malcolm X Plaza":"Central Harlem at Lenox Avenue, renamed for Malcolm X.","111 St":"Richmond Hill, Queens \u2014 near Jamaica Bay marshlands.","116 St":"Harlem crossroads on Lenox Avenue, near Apollo Theater vicinity.","116 St-Columbia University":"Morningside Heights, right at Columbia University's main campus.","121 St":"Woodhaven, Queens \u2014 quiet residential area near Jamaica Bay.","125 St":"Harlem's main commercial strip, a major transit hub.","135 St":"Central Harlem on Lenox Avenue, near Schomburg Center.","137 St-City College":"Hamilton Heights, at the City College of New York campus.","138 St-Grand Concourse":"South Bronx at the Grand Concourse, near Bronx County Courthouse.","14 St":"West Village/Chelsea border, one of Manhattan's busiest crosstown streets.","14 St-Union Sq":"Union Square \u2014 greenmarket, park, and major downtown transfer hub.","145 St":"West Harlem near St. Nicholas Avenue, major uptown transfer point.","149 St-Grand Concourse":"South Bronx hub at the Grand Concourse, near Yankee Stadium area.","15 St-Prospect Park":"Windsor Terrace, Brooklyn \u2014 at the southwest corner of Prospect Park.","155 St":"Washington Heights at the Macombs Dam Bridge to the Bronx.","157 St":"Washington Heights, residential area along Broadway.","161 St-Yankee Stadium":"Right at Yankee Stadium in the South Bronx.","163 St-Amsterdam Av":"Washington Heights on Amsterdam Avenue, near Highbridge Park.","167 St":"Grand Concourse in the Bronx, near Franz Sigel Park.","168 St":"Washington Heights \u2014 near Columbia-Presbyterian Medical Center.","168 St-Washington Hts":"Washington Heights along Broadway, near New York-Presbyterian Hospital.","169 St":"Hillcrest, Queens \u2014 residential neighborhood near St. John's University.","170 St":"Grand Concourse in the Bronx, near Claremont Park.","174 St":"Bronx neighborhood of Crotona, along Southern Boulevard.","174-175 Sts":"Mount Hope in the Bronx, along the Grand Concourse.","175 St":"Washington Heights \u2014 one of the deepest stations in the system.","176 St":"Tremont in the Bronx, near Mt. Hope neighborhood.","18 Av":"Bensonhurst, Brooklyn \u2014 near residential area and Gravesend.","18 St":"Chelsea at 18th Street and 7th Avenue, near Fashion District.","181 St":"Washington Heights \u2014 deep station near the George Washington Bridge.","182-183 Sts":"Fordham area in the Bronx, near University Heights.","183 St":"Fordham in the Bronx, along Jerome Avenue.","190 St":"Fort George, Manhattan \u2014 near Fort Tryon Park and the Cloisters.","191 St":"Washington Heights \u2014 one of the deepest stations, served by elevator.","2 Av":"Lower East Side at Houston Street, heart of the historic tenement district.","20 Av":"Bath Beach, Brooklyn \u2014 quiet residential neighborhood near the waterfront.","207 St":"Inwood, northern Manhattan, near Inwood Hill Park.","21 St":"Long Island City/Hunters Point, Queens \u2014 emerging waterfront neighborhood.","21 St-Queensbridge":"Long Island City, near Queensbridge Houses, NYC's largest housing project.","215 St":"Inwood area along Broadway, near the Harlem River.","219 St":"Williamsbridge in the Bronx, along White Plains Road.","225 St":"Marble Hill/Bronx border, along White Plains Road.","23 St":"Chelsea/Flatiron area \u2014 near Madison Square Park and the Flatiron Building.","23 St-Baruch College":"Gramercy Park area at Park Avenue South, near Baruch College.","231 St":"Kingsbridge in the Bronx, near Marble Hill.","233 St":"Wakefield in the Bronx, along White Plains Road.","238 St":"Kingsbridge in the Bronx, near Van Cortlandt Park.","25 Av":"Gravesend, Brooklyn \u2014 residential area near Cropsey Avenue.","25 St":"Greenwood Heights, Brooklyn \u2014 near Green-Wood Cemetery.","28 St":"NoMad/Rose Hill \u2014 between Madison Square Park and Koreatown.","3 Av":"East Village at 3rd Avenue, between Stuyvesant and the Bowery.","3 Av-138 St":"Mott Haven, South Bronx \u2014 near the Bruckner Expressway.","3 Av-149 St":"Melrose in the South Bronx, near the Hub shopping district.","30 Av":"Astoria, Queens \u2014 lively strip of restaurants and shops.","33 St":"Murray Hill at Park Avenue, near the 33rd Street shopping district.","33 St-Rawson St":"Long Island City, Queens \u2014 industrial area turning residential.","34 St-Herald Sq":"Macy's flagship store and Herald Square, major Midtown shopping hub.","34 St-Hudson Yards":"Hudson Yards \u2014 Manhattan's newest neighborhood and the Vessel.","34 St-Penn Station":"Penn Station \u2014 Amtrak, LIRR, NJ Transit, and Madison Square Garden.","36 Av":"Astoria, Queens \u2014 residential area near Kaufman Astoria Studios.","36 St":"Sunset Park, Brooklyn \u2014 near Industry City and the waterfront.","39 Av-Dutch Kills":"Long Island City, near the Dutch Kills neighborhood.","4 Av-9 St":"Park Slope/Gowanus border, major Brooklyn transfer station.","40 St-Lowery St":"Sunnyside, Queens \u2014 residential neighborhood near Sunnyside Yards.","42 St-Bryant Pk":"Bryant Park and the New York Public Library's main branch.","42 St-Port Authority Bus Terminal":"Port Authority Bus Terminal, Midtown's intercity bus hub.","45 St":"Sunset Park, Brooklyn \u2014 near the neighborhood's Chinatown.","46 St":"Sunnyside/Woodside, Queens \u2014 near Queens Boulevard.","46 St-Bliss St":"Sunnyside, Queens \u2014 elevated station on the 7 line.","47-50 Sts-Rockefeller Ctr":"Rockefeller Center \u2014 Top of the Rock, NBC Studios, and the ice rink.","49 St":"Midtown Manhattan, one block from Times Square and Broadway theaters.","5 Av":"Fifth Avenue at 42nd Street, near the New York Public Library.","5 Av/53 St":"Midtown at 5th Avenue and 53rd, near MoMA.","5 Av/59 St":"Southeast corner of Central Park, near the Plaza Hotel.","50 St":"Midtown West at 50th Street, near Radio City Music Hall.","51 St":"Midtown East at Lexington Avenue, near Citigroup Center.","52 St":"Woodside, Queens \u2014 elevated 7 train stop in a residential area.","53 St":"Sunset Park, Brooklyn \u2014 residential neighborhood near 4th Avenue.","55 St":"Sunset Park, Brooklyn \u2014 quiet stop on the D line.","57 St":"Midtown at 6th Avenue, near Carnegie Hall and Central Park South.","57 St-7 Av":"Midtown near Carnegie Hall and the southern edge of Central Park.","59 St":"Midtown East at Lexington Avenue, near Bloomingdale's.","59 St-Columbus Circle":"Columbus Circle \u2014 southwest corner of Central Park, Time Warner Center.","6 Av":"West Village at 6th Avenue and 14th Street, near Jefferson Market.","61 St-Woodside":"Woodside, Queens \u2014 transfer to LIRR at Woodside station.","62 St":"Borough Park/New Utrecht, Brooklyn \u2014 near New Utrecht Avenue.","63 Dr-Rego Park":"Rego Park, Queens \u2014 near Rego Center shopping and Costco.","65 St":"Woodside, Queens \u2014 near the Queens Boulevard commercial strip.","66 St-Lincoln Center":"Lincoln Center \u2014 NYC Ballet, Met Opera, and Juilliard.","67 Av":"Rego Park/Forest Hills border, Queens \u2014 residential area.","68 St-Hunter College":"Upper East Side at Lexington Avenue, at Hunter College.","69 St":"Woodside, Queens \u2014 residential area near Fisk Avenue.","7 Av":"Park Slope, Brooklyn \u2014 also serves Midtown 7th Avenue on B/D/E.","71 St":"Bay Ridge border, Brooklyn \u2014 residential area along New Utrecht Avenue.","72 St":"Upper West Side \u2014 near Strawberry Fields in Central Park and the Dakota.","74 St-Broadway":"Jackson Heights, Queens \u2014 vibrant South Asian and Latin American hub.","75 Av":"Kew Gardens Hills, Queens \u2014 tree-lined residential neighborhood.","75 St-Elderts Ln":"Woodhaven, Queens \u2014 near Forest Park.","77 St":"Upper East Side at Lexington Avenue, near Lenox Hill Hospital.","79 St":"Upper West Side, near the Natural History Museum and Riverside Park.","8 Av":"Sunset Park, Brooklyn \u2014 also a Chelsea stop on the L train.","8 St-NYU":"Greenwich Village \u2014 at the heart of NYU's campus near Washington Square.","80 St":"Hudson Street area of Ozone Park, Queens \u2014 near the A train.","81 St-Museum of Natural History":"Right at the American Museum of Natural History on the Upper West Side.","82 St-Jackson Hts":"Jackson Heights, Queens \u2014 diverse food scene and garden apartments.","85 St-Forest Pkwy":"Woodhaven, Queens \u2014 near Forest Park's running trails.","86 St":"Upper East/West Side \u2014 also serves Bay Ridge and Bensonhurst in Brooklyn.","88 St":"Ozone Park, Queens \u2014 residential area near Rockaway Boulevard.","9 Av":"Borough Park/Sunset Park, Brooklyn \u2014 near Fort Hamilton Parkway.","90 St-Elmhurst Av":"Elmhurst, Queens \u2014 near Elmhurst Hospital.","96 St":"Upper East/West Side boundary \u2014 Second Avenue Subway's northern terminus.","Alabama Av":"East New York, Brooklyn \u2014 near the Alabama Avenue corridor.","Allerton Av":"Allerton in the Bronx, along White Plains Road.","Aqueduct Racetrack":"Aqueduct Racetrack in Ozone Park \u2014 horse racing and Resorts World Casino.","Aqueduct-N Conduit Av":"Ozone Park, Queens \u2014 near Aqueduct Racetrack and North Conduit Avenue.","Astor Pl":"East Village at Astor Place \u2014 near Cooper Union and the Cube sculpture.","Astoria Blvd":"Astoria, Queens \u2014 near the Astoria Boulevard commercial strip.","Astoria-Ditmars Blvd":"Northern tip of Astoria, Queens \u2014 near Astoria Park and the waterfront.","Atlantic Av":"East New York, Brooklyn \u2014 L train stop near Atlantic Avenue.","Atlantic Av-Barclays Ctr":"Barclays Center arena and the Atlantic Terminal mall in Downtown Brooklyn.","Avenue H":"Midwood, Brooklyn \u2014 near Brooklyn College's south campus area.","Avenue I":"Midwood, Brooklyn \u2014 quiet residential area near McDonald Avenue.","Avenue J":"Midwood, Brooklyn \u2014 busy commercial street in the Orthodox Jewish community.","Avenue M":"Midwood, Brooklyn \u2014 lively shopping street near Edward R. Murrow HS.","Avenue N":"Homecrest/Midwood, Brooklyn \u2014 residential area near McDonald Avenue.","Avenue P":"Homecrest, Brooklyn \u2014 residential area near Shell Bank Creek.","Avenue U":"Gravesend/Sheepshead Bay, Brooklyn \u2014 busy shopping strip.","Avenue X":"Gravesend, Brooklyn \u2014 near Coney Island Creek.","Bay 50 St":"Coney Island, Brooklyn \u2014 near the Coney Island Creek.","Bay Pkwy":"Bensonhurst/Borough Park, Brooklyn \u2014 near Bay Parkway shopping.","Bay Ridge Av":"Bay Ridge, Brooklyn \u2014 near the neighborhood's main shopping street.","Bay Ridge-95 St":"Southern tip of Bay Ridge, Brooklyn \u2014 near Fort Hamilton and the Verrazzano.","Baychester Av":"Baychester in the northeast Bronx, near Co-op City.","Beach 105 St":"Rockaway Park, Queens \u2014 residential area near the beach.","Beach 25 St":"Far Rockaway, Queens \u2014 near the Rockaway boardwalk.","Beach 36 St":"Edgemere, Queens \u2014 near the Rockaway beaches.","Beach 44 St":"Far Rockaway, Queens \u2014 residential area near the ocean.","Beach 60 St":"Arverne, Queens \u2014 near the Arverne by the Sea development.","Beach 67 St":"Arverne, Queens \u2014 close to the Rockaway boardwalk and beach.","Beach 90 St":"Rockaway Beach, Queens \u2014 near the beach and surf spots.","Beach 98 St":"Rockaway Beach, Queens \u2014 popular surf break and boardwalk access.","Bedford Av":"Williamsburg, Brooklyn \u2014 one of NYC's busiest L train stations.","Bedford Park Blvd":"Bedford Park, Bronx \u2014 near the New York Botanical Garden entrance.","Bedford Park Blvd-Lehman College":"Bedford Park, Bronx \u2014 near Lehman College of CUNY.","Bedford-Nostrand Avs":"Bed-Stuy, Brooklyn \u2014 at Bedford and Nostrand, heart of the neighborhood.","Bergen St":"Boerum Hill/Cobble Hill, Brooklyn \u2014 brownstone neighborhood.","Beverley Rd":"Flatbush, Brooklyn \u2014 residential area near Beverley Road shops.","Beverly Rd":"Flatbush, Brooklyn \u2014 near Prospect Park South's Victorian homes.","Bleecker St":"NoHo/Greenwich Village \u2014 near NYU and Lafayette Street.","Borough Hall":"Downtown Brooklyn \u2014 near Brooklyn Borough Hall and the courts.","Botanic Garden":"Prospect-Lefferts Gardens \u2014 right at the Brooklyn Botanic Garden entrance.","Bowery":"Lower East Side at the Bowery, near the New Museum.","Bowling Green":"Southern tip of Manhattan \u2014 near the Charging Bull and Battery Park.","Briarwood":"Briarwood, Queens \u2014 near Queens Supreme Court complex.","Brighton Beach":"Brighton Beach, Brooklyn \u2014 Little Odessa, the Russian-speaking enclave.","Broad Channel":"Broad Channel, Queens \u2014 island community in Jamaica Bay, near wildlife refuge.","Broad St":"Financial District at Broad and Wall Streets, near the NYSE.","Broadway":"Astoria, Queens \u2014 also a Williamsburg G stop on Broadway.","Broadway Junction":"East New York, Brooklyn \u2014 major transfer hub for five subway services.","Broadway-Lafayette St":"NoHo at Broadway and Houston, connects to Bleecker St station.","Bronx Park East":"Bronx Park East \u2014 near the Bronx Zoo's Bronxdale entrance.","Brook Av":"Mott Haven, South Bronx \u2014 near Brook Avenue and residential area.","Brooklyn Bridge-City Hall":"City Hall and the Brooklyn Bridge \u2014 near the Municipal Building.","Buhre Av":"Pelham Bay, Bronx \u2014 residential area near Buhre Avenue.","Burke Av":"Williamsbridge, Bronx \u2014 residential area along White Plains Road.","Burnside Av":"Burnside, Bronx \u2014 along Jerome Avenue near University Heights.","Bushwick Av-Aberdeen St":"East Williamsburg/Bushwick, Brooklyn \u2014 industrial area turning artistic.","Canal St":"Chinatown/Tribeca border \u2014 gateway to Manhattan's Chinatown.","Canarsie-Rockaway Pkwy":"Canarsie, Brooklyn \u2014 L train terminus near Canarsie Pier and Jamaica Bay.","Carroll St":"Carroll Gardens, Brooklyn \u2014 charming brownstone neighborhood.","Castle Hill Av":"Castle Hill, Bronx \u2014 near Westchester Creek.","Cathedral Pkwy (110 St)":"Cathedral Parkway \u2014 near the Cathedral of St. John the Divine.","Central Av":"Bushwick, Brooklyn \u2014 on the M train near Irving Square Park.","Chambers St":"Lower Manhattan government district, near City Hall.","Chauncey St":"Ocean Hill, Brooklyn \u2014 residential area along Broadway.","Christopher St-Stonewall":"West Village \u2014 birthplace of the LGBTQ rights movement at Stonewall Inn.","Church Av":"Flatbush, Brooklyn \u2014 busy commercial street and major transfer point.","City Hall":"Lower Manhattan \u2014 near City Hall Park and the Woolworth Building.","Clark St":"Brooklyn Heights \u2014 near the Promenade with Manhattan skyline views.","Classon Av":"Clinton Hill, Brooklyn \u2014 near Pratt Institute.","Cleveland St":"East New York, Brooklyn \u2014 residential area along Jamaica Avenue.","Clinton-Washington Avs":"Clinton Hill, Brooklyn \u2014 near the Pratt Institute campus.","Coney Island-Stillwell Av":"Coney Island \u2014 the boardwalk, Luna Park, and Nathan's Famous hot dogs.","Cortelyou Rd":"Flatbush/Ditmas Park, Brooklyn \u2014 tree-lined streets and Victorian houses.","Cortlandt St":"Financial District, near the World Trade Center and Oculus.","Court Sq":"Long Island City, Queens \u2014 near MoMA PS1 and the Citigroup tower.","Court Sq-23 St":"Long Island City, Queens \u2014 near the Queensboro Plaza area.","Court St":"Downtown Brooklyn/Brooklyn Heights \u2014 near Montague Street shops.","Crescent St":"Cypress Hills/East New York, Brooklyn \u2014 near Highland Park.","Crown Hts-Utica Av":"Crown Heights, Brooklyn \u2014 eastern end of the Eastern Parkway line.","Cypress Av":"Mott Haven, South Bronx \u2014 near Barretto Point Park.","Cypress Hills":"Cypress Hills, Brooklyn \u2014 residential area near Highland Park.","DeKalb Av":"Downtown Brooklyn at Flatbush Avenue, a busy transfer station.","Delancey St-Essex St":"Lower East Side \u2014 near Essex Street Market and the Williamsburg Bridge.","Ditmas Av":"Ditmas Park, Brooklyn \u2014 near the historic Victorian flatbush homes.","Dyckman St":"Inwood, Manhattan \u2014 near Dyckman Street's lively restaurant row.","E 143 St-St Mary's St":"Mott Haven, South Bronx \u2014 near St. Mary's Park.","E 149 St":"Mott Haven, South Bronx \u2014 near the Hub shopping area.","E 180 St":"West Farms, Bronx \u2014 junction for Dyre Avenue and White Plains lines.","East 105 St":"Canarsie, Brooklyn \u2014 residential area near Canarsie Park.","East Broadway":"Chinatown/Lower East Side \u2014 near the Manhattan Bridge and Seward Park.","Eastchester-Dyre Av":"Eastchester, Bronx \u2014 northern terminus of the Dyre Avenue line.","Eastern Pkwy-Brooklyn Museum":"Crown Heights \u2014 right at the Brooklyn Museum on Eastern Parkway.","Elder Av":"Soundview, Bronx \u2014 residential area near Elder Avenue.","Elmhurst Av":"Elmhurst, Queens \u2014 diverse neighborhood near Queens Center Mall.","Euclid Av":"East New York, Brooklyn \u2014 eastern terminus of the C train.","Far Rockaway-Mott Av":"Far Rockaway, Queens \u2014 A train terminus near the Rockaway beaches.","Flatbush Av-Brooklyn College":"Flatbush, Brooklyn \u2014 at Brooklyn College, terminus of the 2 and 5.","Flushing Av":"Williamsburg/Bushwick, Brooklyn \u2014 near the Brooklyn Navy Yard.","Flushing-Main St":"Downtown Flushing, Queens \u2014 one of NYC's biggest Chinatowns.","Fordham Rd":"Fordham, Bronx \u2014 major shopping strip near Fordham University.","Forest Av":"Ridgewood, Queens \u2014 near Forest and Myrtle Avenue shops.","Forest Hills-71 Av":"Forest Hills, Queens \u2014 near Austin Street shops and Forest Hills Stadium.","Fort Hamilton Pkwy":"Borough Park/Kensington, Brooklyn \u2014 near Fort Hamilton Parkway.","Franklin Av":"Crown Heights, Brooklyn \u2014 transfer to Franklin Avenue Shuttle.","Franklin Av-Medgar Evers College":"Crown Heights, Brooklyn \u2014 near Medgar Evers College of CUNY.","Franklin St":"Tribeca at Franklin Street, near trendy restaurants and galleries.","Freeman St":"Longwood, Bronx \u2014 near Freeman Street's residential area.","Fresh Pond Rd":"Ridgewood/Middle Village, Queens \u2014 near Fresh Pond Road shops.","Fulton St":"Lower Manhattan \u2014 major hub near the Fulton Center and South Street Seaport.","Gates Av":"Bed-Stuy, Brooklyn \u2014 near the Gates Avenue commercial corridor.","Graham Av":"East Williamsburg, Brooklyn \u2014 near Graham Avenue's dining scene.","Grand Army Plaza":"Prospect Heights \u2014 at the grand arch entrance to Prospect Park.","Grand Av-Newtown":"Elmhurst, Queens \u2014 near Grand Avenue shopping.","Grand Central-42 St":"Grand Central Terminal \u2014 Beaux-Arts landmark, Metro-North hub.","Grand St":"Williamsburg/Chinatown \u2014 serves both B/D in Manhattan and L in Brooklyn.","Grant Av":"East New York/Ozone Park border, near Liberty Avenue.","Greenpoint Av":"Greenpoint, Brooklyn \u2014 Polish and hipster neighborhood on the waterfront.","Gun Hill Rd":"Norwood/Williamsbridge, Bronx \u2014 near Gun Hill Road shopping.","Halsey St":"Bed-Stuy, Brooklyn \u2014 near Halsey Street's row houses.","Harlem-148 St":"Northern terminus of the 3 train, in Central Harlem.","Hewes St":"Williamsburg, Brooklyn \u2014 near the Williamsburg Bridge approach.","High St":"Brooklyn Heights/DUMBO \u2014 near the Brooklyn Bridge and waterfront.","Houston St":"West Village at Houston and Varick, near SoHo.","Howard Beach-JFK Airport":"Howard Beach, Queens \u2014 transfer to AirTrain JFK.","Hoyt St":"Downtown Brooklyn \u2014 near the Fulton Mall shopping district.","Hoyt-Schermerhorn Sts":"Downtown Brooklyn \u2014 often used for filming; connects A/C and G.","Hunters Point Av":"Long Island City, Queens \u2014 near the Hunters Point waterfront parks.","Hunts Point Av":"Hunts Point, Bronx \u2014 near the Hunts Point food distribution center.","Intervale Av":"Longwood, Bronx \u2014 near Intervale Avenue and residential area.","Inwood-207 St":"Inwood, Manhattan \u2014 A train terminus, near Inwood Hill Park.","Jackson Av":"Mott Haven/Longwood, Bronx \u2014 near the Hub commercial district.","Jackson Hts-Roosevelt Av":"Jackson Heights, Queens \u2014 one of NYC's most diverse intersections.","Jamaica Center-Parsons/Archer":"Downtown Jamaica, Queens \u2014 major transit hub for buses and subway.","Jamaica-179 St":"Eastern terminus of the F train, in Jamaica Hills, Queens.","Jamaica-Van Wyck":"Jamaica, Queens \u2014 near the Van Wyck Expressway.","Jay St-MetroTech":"Downtown Brooklyn's tech hub, near Brooklyn Borough Hall.","Jefferson St":"Bushwick, Brooklyn \u2014 residential area along the L line.","Junction Blvd":"Corona, Queens \u2014 near the neighborhood's Latin American community.","Junius St":"Brownsville, Brooklyn \u2014 residential area near Betsy Head Park.","Kew Gardens-Union Tpke":"Kew Gardens, Queens \u2014 near Queens Borough Hall.","Kings Hwy":"Midwood/Gravesend, Brooklyn \u2014 busy shopping street.","Kingsbridge Rd":"Kingsbridge, Bronx \u2014 near Jerome Avenue and the Kingsbridge Armory.","Kingston Av":"Crown Heights, Brooklyn \u2014 center of the Lubavitch Hasidic community.","Kingston-Throop Avs":"Bed-Stuy, Brooklyn \u2014 along Fulton Street's commercial corridor.","Knickerbocker Av":"Bushwick, Brooklyn \u2014 near the Bushwick art scene on Knickerbocker.","Kosciuszko St":"Bed-Stuy, Brooklyn \u2014 named for Polish-American Revolutionary War hero.","Lafayette Av":"Fort Greene, Brooklyn \u2014 near BAM (Brooklyn Academy of Music).","Lexington Av/53 St":"Midtown East at Lexington and 53rd, near the Citigroup Center.","Lexington Av/59 St":"Midtown East, near Bloomingdale's flagship store.","Lexington Av/63 St":"Upper East Side \u2014 Second Avenue Subway transfer, near Central Park.","Liberty Av":"East New York, Brooklyn \u2014 near the Liberty Avenue commercial strip.","Livonia Av":"Brownsville/East New York, Brooklyn \u2014 near Livonia Avenue.","Longwood Av":"Longwood, Bronx \u2014 near historic Longwood Avenue row houses.","Lorimer St":"Williamsburg, Brooklyn \u2014 near McCarren Park and the hipster core.","Marble Hill-225 St":"Marble Hill \u2014 technically Manhattan but connected to the Bronx by land.","Marcy Av":"Williamsburg, Brooklyn \u2014 near the Williamsburg Bridge.","Metropolitan Av":"Williamsburg/East Williamsburg, Brooklyn \u2014 near Metropolitan Avenue shops.","Mets-Willets Point":"Flushing Meadows \u2014 Citi Field (Mets), USTA (US Open), and the 1964 Fair site.","Middle Village-Metropolitan Av":"Middle Village, Queens \u2014 M train terminus near Juniper Valley Park.","Middletown Rd":"Pelham Bay, Bronx \u2014 residential area near Middletown Road.","Montrose Av":"East Williamsburg, Brooklyn \u2014 near Montrose Avenue and Bushwick border.","Morgan Av":"East Williamsburg, Brooklyn \u2014 near Morgan Avenue's warehouse conversions.","Morris Park":"Morris Park, Bronx \u2014 near Albert Einstein College of Medicine.","Morrison Av-Soundview":"Soundview, Bronx \u2014 near Soundview Park on the Bronx River.","Mosholu Pkwy":"Bedford Park, Bronx \u2014 near Mosholu Parkway and the Bronx Zoo.","Mt Eden Av":"Mount Eden, Bronx \u2014 near the Bronx's Grand Concourse.","Myrtle Av":"Bed-Stuy/Clinton Hill, Brooklyn \u2014 near Myrtle Avenue shopping.","Myrtle-Willoughby Avs":"Bed-Stuy, Brooklyn \u2014 near Pratt Institute and Clinton Hill.","Myrtle-Wyckoff Avs":"Bushwick/Ridgewood border \u2014 L/M transfer near Wyckoff Avenue.","Nassau Av":"Greenpoint, Brooklyn \u2014 near McCarren Park and Nassau Avenue shops.","Neck Rd":"Sheepshead Bay, Brooklyn \u2014 residential area near Neck Road.","Neptune Av":"Coney Island, Brooklyn \u2014 near Neptune Avenue and the boardwalk area.","Nereid Av":"Wakefield, Bronx \u2014 near Nereid Avenue, close to the Westchester border.","Nevins St":"Downtown Brooklyn/Boerum Hill \u2014 near the Barclays Center area.","New Lots Av":"East New York, Brooklyn \u2014 terminus for several lines near Linden Blvd.","New Utrecht Av":"Borough Park/Bensonhurst, Brooklyn \u2014 near New Utrecht Avenue.","Newkirk Av-Little Haiti":"Flatbush, Brooklyn \u2014 heart of the Haitian-American community.","Newkirk Plaza":"Flatbush, Brooklyn \u2014 lively open-air plaza with shops and restaurants.","Northern Blvd":"Woodside, Queens \u2014 near Northern Boulevard's auto district.","Norwood Av":"East New York, Brooklyn \u2014 residential area near Norwood Avenue.","Norwood-205 St":"Norwood, Bronx \u2014 D train terminus near Mosholu Parkway.","Nostrand Av":"Crown Heights/Bed-Stuy, Brooklyn \u2014 along Nostrand Avenue.","Ocean Pkwy":"Brighton Beach, Brooklyn \u2014 near Ocean Parkway's greenway.","Ozone Park-Lefferts Blvd":"Ozone Park, Queens \u2014 A train branch terminus at Lefferts Boulevard.","Park Pl":"Prospect Heights, Brooklyn \u2014 Franklin Avenue Shuttle stop near Washington Ave.","Park Place":"Downtown Brooklyn \u2014 near Fulton Mall and City Point.","Parkchester":"Parkchester, Bronx \u2014 a large planned community near Westchester Avenue.","Parkside Av":"Flatbush, Brooklyn \u2014 at the southeast edge of Prospect Park.","Parsons Blvd":"Jamaica, Queens \u2014 near Parsons Boulevard's commercial district.","Pelham Bay Park":"6 train terminus, near Pelham Bay Park and Orchard Beach.","Pelham Pkwy":"Pelham Parkway, Bronx \u2014 near the Bronx Zoo's main entrance.","Pennsylvania Av":"East New York, Brooklyn \u2014 near Pennsylvania Avenue.","President St-Medgar Evers College":"Crown Heights, Brooklyn \u2014 near Medgar Evers College.","Prince St":"SoHo/Nolita \u2014 boutiques, galleries, and cast-iron architecture.","Prospect Av":"South Bronx (2/5) and South Slope, Brooklyn (D/N/R).","Prospect Park":"Prospect Park, Brooklyn \u2014 at the Flatbush Avenue entrance to the park.","Queens Plaza":"Long Island City, Queens \u2014 near Queens Plaza and the Queensboro Bridge.","Queensboro Plaza":"Long Island City \u2014 elevated station with Manhattan skyline views.","Ralph Av":"Bed-Stuy, Brooklyn \u2014 along Ralph Avenue and Fulton Street.","Rector St":"Financial District \u2014 near Trinity Church and the 9/11 Memorial.","Rockaway Av":"Brownsville, Brooklyn \u2014 near Rockaway Avenue.","Rockaway Blvd":"South Ozone Park, Queens \u2014 near Rockaway Boulevard.","Rockaway Park-Beach 116 St":"Rockaway Park, Queens \u2014 near the Rockaway Beach boardwalk.","Roosevelt Island":"Roosevelt Island \u2014 the aerial tram and FDR Four Freedoms Park.","Saratoga Av":"Brownsville, Brooklyn \u2014 near Saratoga Avenue.","Seneca Av":"Ridgewood, Queens \u2014 near Seneca Avenue's residential area.","Sheepshead Bay":"Sheepshead Bay, Brooklyn \u2014 waterfront fishing boats and seafood.","Shepherd Av":"East New York, Brooklyn \u2014 residential area near Shepherd Avenue.","Simpson St":"Longwood, Bronx \u2014 near Simpson Street and Fox Square.","Smith-9 Sts":"Gowanus, Brooklyn \u2014 highest outdoor station in the system.","South Ferry":"Southern tip of Manhattan \u2014 Staten Island Ferry terminal at Battery Park.","Spring St":"SoHo/Nolita \u2014 near the SoHo cast-iron historic district.","St Lawrence Av":"Soundview, Bronx \u2014 residential area near St. Lawrence Avenue.","Steinway St":"Astoria, Queens \u2014 named for the Steinway piano factory nearby.","Sterling St":"Prospect Lefferts Gardens, Brooklyn \u2014 residential tree-lined street.","Sutphin Blvd":"Jamaica, Queens \u2014 near the downtown Jamaica commercial district.","Sutphin Blvd-Archer Av-JFK Airport":"Jamaica, Queens \u2014 transfer to AirTrain JFK at the Archer Avenue hub.","Sutter Av":"Brownsville, Brooklyn \u2014 L train stop near Sutter Avenue.","Sutter Av-Rutland Rd":"Crown Heights/East Flatbush, Brooklyn \u2014 near Rutland Road.","Times Sq-42 St":"Heart of Midtown \u2014 Broadway theaters, bright lights, the Crossroads of the World.","Tremont Av":"Tremont, Bronx \u2014 along the Grand Concourse, near Bronx Zoo.","Union St":"Park Slope, Brooklyn \u2014 near Union Street's brownstone blocks.","Utica Av":"Crown Heights, Brooklyn \u2014 A/C stop at Fulton and Utica, major bus hub.","Van Cortlandt Park-242 St":"1 train terminus \u2014 entrance to Van Cortlandt Park's trails.","Van Siclen Av":"East New York, Brooklyn \u2014 near Van Siclen Avenue.","Vernon Blvd-Jackson Av":"Long Island City, Queens \u2014 near Gantry Plaza State Park.","W 4 St-Wash Sq":"Greenwich Village at Washington Square Park \u2014 NYU's front yard.","W 8 St-NY Aquarium":"Coney Island boardwalk \u2014 right at the New York Aquarium.","WTC Cortlandt":"World Trade Center \u2014 rebuilt station at the 9/11 Memorial site.","Wakefield-241 St":"Wakefield, Bronx \u2014 2 train terminus near the Westchester border.","Wall St":"Financial District \u2014 near the New York Stock Exchange and Federal Hall.","West Farms Sq-E Tremont Av":"West Farms, Bronx \u2014 near the Bronx Zoo's Southern Boulevard entrance.","Westchester Sq-E Tremont Av":"Westchester Square, Bronx \u2014 near the historic town square.","Whitehall St-South Ferry":"Southern tip of Manhattan \u2014 near the Staten Island Ferry and Battery Park.","Whitlock Av":"Hunts Point, Bronx \u2014 near the Hunts Point food markets.","Wilson Av":"Bushwick, Brooklyn \u2014 near Wilson Avenue's residential blocks.","Winthrop St":"Prospect Lefferts Gardens, Brooklyn \u2014 near Kings County Hospital.","Woodhaven Blvd":"Woodhaven, Queens \u2014 near Forest Park and Queens Boulevard.","Woodlawn":"Woodlawn, Bronx \u2014 4 train terminus, near Woodlawn Cemetery.","World Trade Center":"E train terminus at the World Trade Center and the Oculus.","York St":"DUMBO, Brooklyn \u2014 near the Brooklyn Bridge and waterfront parks.","Zerega Av":"Castle Hill, Bronx \u2014 near Zerega Avenue industrial area."};
+const STATION_CONTEXT = {"1 Av":"East Village at 1st Avenue and 14th Street, near Stuyvesant Town.","103 St":"Upper Manhattan border of East and West sides, near Central Park North.","103 St-Corona Plaza":"Heart of Corona, Queens \u2014 large Latino community and lively plaza.","104 St":"Ozone Park, Queens \u2014 residential neighborhood near Liberty Avenue.","110 St":"East Harlem at Lexington Avenue, near Mount Sinai Hospital.","110 St-Malcolm X Plaza":"Central Harlem at Lenox Avenue, renamed for Malcolm X.","111 St":"Richmond Hill, Queens \u2014 near Jamaica Bay marshlands.","116 St":"Harlem crossroads on Lenox Avenue, near Apollo Theater vicinity.","116 St-Columbia University":"Morningside Heights, right at Columbia University's main campus.","121 St":"Woodhaven, Queens \u2014 quiet residential area near Jamaica Bay.","125 St":"Harlem's main commercial strip, a major transit hub.","135 St":"Central Harlem on Lenox Avenue, near Schomburg Center.","137 St-City College":"Hamilton Heights, at the City College of New York campus.","138 St-Grand Concourse":"South Bronx at the Grand Concourse, near Bronx County Courthouse.","14 St":"West Village/Chelsea border, one of Manhattan's busiest crosstown streets.","14 St-Union Sq":"Union Square \u2014 greenmarket, park, and major downtown transfer hub.","145 St":"West Harlem near St. Nicholas Avenue, major uptown transfer point.","149 St-Grand Concourse":"South Bronx hub at the Grand Concourse, near Yankee Stadium area.","15 St-Prospect Park":"Windsor Terrace, Brooklyn \u2014 at the southwest corner of Prospect Park.","155 St":"Washington Heights at the Macombs Dam Bridge to the Bronx.","157 St":"Washington Heights, residential area along Broadway.","161 St-Yankee Stadium":"Right at Yankee Stadium in the South Bronx.","163 St-Amsterdam Av":"Washington Heights on Amsterdam Avenue, near Highbridge Park.","167 St":"Grand Concourse in the Bronx, near Franz Sigel Park.","168 St":"Washington Heights \u2014 near Columbia-Presbyterian Medical Center.","168 St-Washington Hts":"Washington Heights along Broadway, near New York-Presbyterian Hospital.","169 St":"Hillcrest, Queens \u2014 residential neighborhood near St. John's University.","170 St":"Grand Concourse in the Bronx, near Claremont Park.","174 St":"Bronx neighborhood of Crotona, along Southern Boulevard.","174-175 Sts":"Mount Hope in the Bronx, along the Grand Concourse.","175 St":"Washington Heights \u2014 one of the deepest stations in the system.","176 St":"Tremont in the Bronx, near Mt. Hope neighborhood.","18 Av":"Bensonhurst, Brooklyn \u2014 near residential area and Gravesend.","18 St":"Chelsea at 18th Street and 7th Avenue, near Fashion District.","181 St":"Washington Heights \u2014 deep station near the George Washington Bridge.","182-183 Sts":"Fordham area in the Bronx, near University Heights.","183 St":"Fordham in the Bronx, along Jerome Avenue.","190 St":"Fort George, Manhattan \u2014 near Fort Tryon Park and the Cloisters.","191 St":"Washington Heights \u2014 one of the deepest stations, served by elevator.","2 Av":"Lower East Side at Houston Street, heart of the historic tenement district.","20 Av":"Bath Beach, Brooklyn \u2014 quiet residential neighborhood near the waterfront.","207 St":"Inwood, northern Manhattan, near Inwood Hill Park.","21 St":"Long Island City/Hunters Point, Queens \u2014 emerging waterfront neighborhood.","21 St-Queensbridge":"Long Island City, near Queensbridge Houses, NYC's largest housing project.","215 St":"Inwood area along Broadway, near the Harlem River.","219 St":"Williamsbridge in the Bronx, along White Plains Road.","225 St":"Marble Hill/Bronx border, along White Plains Road.","23 St":"Chelsea/Flatiron area \u2014 near Madison Square Park and the Flatiron Building.","23 St-Baruch College":"Gramercy Park area at Park Avenue South, near Baruch College.","231 St":"Kingsbridge in the Bronx, near Marble Hill.","233 St":"Wakefield in the Bronx, along White Plains Road.","238 St":"Kingsbridge in the Bronx, near Van Cortlandt Park.","25 Av":"Gravesend, Brooklyn \u2014 residential area near Cropsey Avenue.","25 St":"Greenwood Heights, Brooklyn \u2014 near Green-Wood Cemetery.","28 St":"NoMad/Rose Hill \u2014 between Madison Square Park and Koreatown.","3 Av":"East Village at 3rd Avenue, between Stuyvesant and the Bowery.","3 Av-138 St":"Mott Haven, South Bronx \u2014 near the Bruckner Expressway.","3 Av-149 St":"Melrose in the South Bronx, near the Hub shopping district.","30 Av":"Astoria, Queens \u2014 lively strip of restaurants and shops.","33 St":"Murray Hill at Park Avenue, near the 33rd Street shopping district.","33 St-Rawson St":"Long Island City, Queens \u2014 industrial area turning residential.","34 St-Herald Sq":"Macy's flagship store and Herald Square, major Midtown shopping hub.","34 St-Hudson Yards":"Hudson Yards \u2014 Manhattan's newest neighborhood and the Vessel.","34 St-Penn Station":"Penn Station \u2014 Amtrak, LIRR, NJ Transit, and Madison Square Garden.","36 Av":"Astoria, Queens \u2014 residential area near Kaufman Astoria Studios.","36 St":"Sunset Park, Brooklyn \u2014 near Industry City and the waterfront.","39 Av-Dutch Kills":"Long Island City, near the Dutch Kills neighborhood.","4 Av-9 St":"Park Slope/Gowanus border, major Brooklyn transfer station.","40 St-Lowery St":"Sunnyside, Queens \u2014 residential neighborhood near Sunnyside Yards.","42 St-Bryant Pk":"Bryant Park and the New York Public Library's main branch.","42 St-Port Authority Bus Terminal":"Port Authority Bus Terminal, Midtown's intercity bus hub.","45 St":"Sunset Park, Brooklyn \u2014 near the neighborhood's Chinatown.","46 St":"Sunnyside/Woodside, Queens \u2014 near Queens Boulevard.","46 St-Bliss St":"Sunnyside, Queens \u2014 elevated station on the 7 line.","47-50 Sts-Rockefeller Ctr":"Rockefeller Center \u2014 Top of the Rock, NBC Studios, and the ice rink.","49 St":"Midtown Manhattan, one block from Times Square and Broadway theaters.","5 Av":"Fifth Avenue at 42nd Street, near the New York Public Library.","5 Av/53 St":"Midtown at 5th Avenue and 53rd, near MoMA.","5 Av/59 St":"Southeast corner of Central Park, near the Plaza Hotel.","50 St":"Midtown West at 50th Street, near Radio City Music Hall.","51 St":"Midtown East at Lexington Avenue, near Citigroup Center.","52 St":"Woodside, Queens \u2014 elevated 7 train stop in a residential area.","53 St":"Sunset Park, Brooklyn \u2014 residential neighborhood near 4th Avenue.","55 St":"Sunset Park, Brooklyn \u2014 quiet stop on the D line.","57 St":"Midtown at 6th Avenue, near Carnegie Hall and Central Park South.","57 St-7 Av":"Midtown near Carnegie Hall and the southern edge of Central Park.","59 St":"Midtown East at Lexington Avenue, near Bloomingdale's.","59 St-Columbus Circle":"Columbus Circle \u2014 southwest corner of Central Park, Time Warner Center.","6 Av":"West Village at 6th Avenue and 14th Street, near Jefferson Market.","61 St-Woodside":"Woodside, Queens \u2014 transfer to LIRR at Woodside station.","62 St":"Borough Park/New Utrecht, Brooklyn \u2014 near New Utrecht Avenue.","63 Dr-Rego Park":"Rego Park, Queens \u2014 near Rego Center shopping and Costco.","65 St":"Woodside, Queens \u2014 near the Queens Boulevard commercial strip.","66 St-Lincoln Center":"Lincoln Center \u2014 NYC Ballet, Met Opera, and Juilliard.","67 Av":"Rego Park/Forest Hills border, Queens \u2014 residential area.","68 St-Hunter College":"Upper East Side at Lexington Avenue, at Hunter College.","69 St":"Woodside, Queens \u2014 residential area near Fisk Avenue.","7 Av":"Park Slope, Brooklyn \u2014 at Flatbush and 7th Avenue, near the neighborhood's main strip.","71 St":"Bay Ridge border, Brooklyn \u2014 residential area along New Utrecht Avenue.","72 St":"Upper West Side \u2014 near Strawberry Fields in Central Park and the Dakota.","74 St-Broadway":"Jackson Heights, Queens \u2014 vibrant South Asian and Latin American hub.","75 Av":"Kew Gardens Hills, Queens \u2014 tree-lined residential neighborhood.","75 St-Elderts Ln":"Woodhaven, Queens \u2014 near Forest Park.","77 St":"Upper East Side at Lexington Avenue, near Lenox Hill Hospital.","79 St":"Upper West Side, near the Natural History Museum and Riverside Park.","8 Av":"Sunset Park, Brooklyn \u2014 also a Chelsea stop on the L train.","8 St-NYU":"Greenwich Village \u2014 at the heart of NYU's campus near Washington Square.","80 St":"Hudson Street area of Ozone Park, Queens \u2014 near the A train.","81 St-Museum of Natural History":"Right at the American Museum of Natural History on the Upper West Side.","82 St-Jackson Hts":"Jackson Heights, Queens \u2014 diverse food scene and garden apartments.","85 St-Forest Pkwy":"Woodhaven, Queens \u2014 near Forest Park's running trails.","86 St":"Upper East/West Side \u2014 also serves Bay Ridge and Bensonhurst in Brooklyn.","88 St":"Ozone Park, Queens \u2014 residential area near Rockaway Boulevard.","9 Av":"Borough Park/Sunset Park, Brooklyn \u2014 near Fort Hamilton Parkway.","90 St-Elmhurst Av":"Elmhurst, Queens \u2014 near Elmhurst Hospital.","96 St":"Upper East/West Side boundary \u2014 Second Avenue Subway's northern terminus.","Alabama Av":"East New York, Brooklyn \u2014 near the Alabama Avenue corridor.","Allerton Av":"Allerton in the Bronx, along White Plains Road.","Aqueduct Racetrack":"Aqueduct Racetrack in Ozone Park \u2014 horse racing and Resorts World Casino.","Aqueduct-N Conduit Av":"Ozone Park, Queens \u2014 near Aqueduct Racetrack and North Conduit Avenue.","Astor Pl":"East Village at Astor Place \u2014 near Cooper Union and the Cube sculpture.","Astoria Blvd":"Astoria, Queens \u2014 near the Astoria Boulevard commercial strip.","Astoria-Ditmars Blvd":"Northern tip of Astoria, Queens \u2014 near Astoria Park and the waterfront.","Atlantic Av":"East New York, Brooklyn \u2014 L train stop near Atlantic Avenue.","Atlantic Av-Barclays Ctr":"Barclays Center arena and the Atlantic Terminal mall in Downtown Brooklyn.","Avenue H":"Midwood, Brooklyn \u2014 near Brooklyn College's south campus area.","Avenue I":"Midwood, Brooklyn \u2014 quiet residential area near McDonald Avenue.","Avenue J":"Midwood, Brooklyn \u2014 busy commercial street in the Orthodox Jewish community.","Avenue M":"Midwood, Brooklyn \u2014 lively shopping street near Edward R. Murrow HS.","Avenue N":"Homecrest/Midwood, Brooklyn \u2014 residential area near McDonald Avenue.","Avenue P":"Homecrest, Brooklyn \u2014 residential area near Shell Bank Creek.","Avenue U":"Gravesend/Sheepshead Bay, Brooklyn \u2014 busy shopping strip.","Avenue X":"Gravesend, Brooklyn \u2014 near Coney Island Creek.","Bay 50 St":"Coney Island, Brooklyn \u2014 near the Coney Island Creek.","Bay Pkwy":"Bensonhurst/Borough Park, Brooklyn \u2014 near Bay Parkway shopping.","Bay Ridge Av":"Bay Ridge, Brooklyn \u2014 near the neighborhood's main shopping street.","Bay Ridge-95 St":"Southern tip of Bay Ridge, Brooklyn \u2014 near Fort Hamilton and the Verrazzano.","Baychester Av":"Baychester in the northeast Bronx, near Co-op City.","Beach 105 St":"Rockaway Park, Queens \u2014 residential area near the beach.","Beach 25 St":"Far Rockaway, Queens \u2014 near the Rockaway boardwalk.","Beach 36 St":"Edgemere, Queens \u2014 near the Rockaway beaches.","Beach 44 St":"Far Rockaway, Queens \u2014 residential area near the ocean.","Beach 60 St":"Arverne, Queens \u2014 near the Arverne by the Sea development.","Beach 67 St":"Arverne, Queens \u2014 close to the Rockaway boardwalk and beach.","Beach 90 St":"Rockaway Beach, Queens \u2014 near the beach and surf spots.","Beach 98 St":"Rockaway Beach, Queens \u2014 popular surf break and boardwalk access.","Bedford Av":"Williamsburg, Brooklyn \u2014 one of NYC's busiest L train stations.","Bedford Park Blvd":"Bedford Park, Bronx \u2014 near the New York Botanical Garden entrance.","Bedford Park Blvd-Lehman College":"Bedford Park, Bronx \u2014 near Lehman College of CUNY.","Bedford-Nostrand Avs":"Bed-Stuy, Brooklyn \u2014 at Bedford and Nostrand, heart of the neighborhood.","Bergen St":"Boerum Hill/Cobble Hill, Brooklyn \u2014 brownstone neighborhood.","Beverley Rd":"Flatbush, Brooklyn \u2014 residential area near Beverley Road shops.","Beverly Rd":"Flatbush, Brooklyn \u2014 near Prospect Park South's Victorian homes.","Bleecker St":"NoHo/Greenwich Village \u2014 near NYU and Lafayette Street.","Borough Hall":"Downtown Brooklyn \u2014 near Brooklyn Borough Hall and the courts.","Botanic Garden":"Prospect-Lefferts Gardens \u2014 right at the Brooklyn Botanic Garden entrance.","Bowery":"Lower East Side at the Bowery, near the New Museum.","Bowling Green":"Southern tip of Manhattan \u2014 near the Charging Bull and Battery Park.","Briarwood":"Briarwood, Queens \u2014 near Queens Supreme Court complex.","Brighton Beach":"Brighton Beach, Brooklyn \u2014 Little Odessa, the Russian-speaking enclave.","Broad Channel":"Broad Channel, Queens \u2014 island community in Jamaica Bay, near wildlife refuge.","Broad St":"Financial District at Broad and Wall Streets, near the NYSE.","Broadway":"Astoria, Queens \u2014 also a Williamsburg G stop on Broadway.","Broadway Junction":"East New York, Brooklyn \u2014 major transfer hub for five subway services.","Broadway-Lafayette St":"NoHo at Broadway and Houston, connects to Bleecker St station.","Bronx Park East":"Bronx Park East \u2014 near the Bronx Zoo's Bronxdale entrance.","Brook Av":"Mott Haven, South Bronx \u2014 near Brook Avenue and residential area.","Brooklyn Bridge-City Hall":"City Hall and the Brooklyn Bridge \u2014 near the Municipal Building.","Buhre Av":"Pelham Bay, Bronx \u2014 residential area near Buhre Avenue.","Burke Av":"Williamsbridge, Bronx \u2014 residential area along White Plains Road.","Burnside Av":"Burnside, Bronx \u2014 along Jerome Avenue near University Heights.","Bushwick Av-Aberdeen St":"East Williamsburg/Bushwick, Brooklyn \u2014 industrial area turning artistic.","Canal St":"Chinatown/Tribeca border \u2014 gateway to Manhattan's Chinatown.","Canarsie-Rockaway Pkwy":"Canarsie, Brooklyn \u2014 L train terminus near Canarsie Pier and Jamaica Bay.","Carroll St":"Carroll Gardens, Brooklyn \u2014 charming brownstone neighborhood.","Castle Hill Av":"Castle Hill, Bronx \u2014 near Westchester Creek.","Cathedral Pkwy (110 St)":"Cathedral Parkway \u2014 near the Cathedral of St. John the Divine.","Central Av":"Bushwick, Brooklyn \u2014 on the M train near Irving Square Park.","Chambers St":"Lower Manhattan government district, near City Hall.","Chauncey St":"Ocean Hill, Brooklyn \u2014 residential area along Broadway.","Christopher St-Stonewall":"West Village \u2014 birthplace of the LGBTQ rights movement at Stonewall Inn.","Church Av":"Flatbush, Brooklyn \u2014 busy commercial street and major transfer point.","City Hall":"Lower Manhattan \u2014 near City Hall Park and the Woolworth Building.","Clark St":"Brooklyn Heights \u2014 near the Promenade with Manhattan skyline views.","Classon Av":"Clinton Hill, Brooklyn \u2014 near Pratt Institute.","Cleveland St":"East New York, Brooklyn \u2014 residential area along Jamaica Avenue.","Clinton-Washington Avs":"Clinton Hill, Brooklyn \u2014 near the Pratt Institute campus.","Coney Island-Stillwell Av":"Coney Island \u2014 the boardwalk, Luna Park, and Nathan's Famous hot dogs.","Cortelyou Rd":"Flatbush/Ditmas Park, Brooklyn \u2014 tree-lined streets and Victorian houses.","Cortlandt St":"Financial District, near the World Trade Center and Oculus.","Court Sq":"Long Island City, Queens \u2014 near MoMA PS1 and the Citigroup tower.","Court Sq-23 St":"Long Island City, Queens \u2014 near the Queensboro Plaza area.","Court St":"Downtown Brooklyn/Brooklyn Heights \u2014 near Montague Street shops.","Crescent St":"Cypress Hills/East New York, Brooklyn \u2014 near Highland Park.","Crown Hts-Utica Av":"Crown Heights, Brooklyn \u2014 eastern end of the Eastern Parkway line.","Cypress Av":"Mott Haven, South Bronx \u2014 near Barretto Point Park.","Cypress Hills":"Cypress Hills, Brooklyn \u2014 residential area near Highland Park.","DeKalb Av":"Downtown Brooklyn at Flatbush Avenue, a busy transfer station.","Delancey St-Essex St":"Lower East Side \u2014 near Essex Street Market and the Williamsburg Bridge.","Ditmas Av":"Ditmas Park, Brooklyn \u2014 near the historic Victorian flatbush homes.","Dyckman St":"Inwood, Manhattan \u2014 near Dyckman Street's lively restaurant row.","E 143 St-St Mary's St":"Mott Haven, South Bronx \u2014 near St. Mary's Park.","E 149 St":"Mott Haven, South Bronx \u2014 near the Hub shopping area.","E 180 St":"West Farms, Bronx \u2014 junction for Dyre Avenue and White Plains lines.","East 105 St":"Canarsie, Brooklyn \u2014 residential area near Canarsie Park.","East Broadway":"Chinatown/Lower East Side \u2014 near the Manhattan Bridge and Seward Park.","Eastchester-Dyre Av":"Eastchester, Bronx \u2014 northern terminus of the Dyre Avenue line.","Eastern Pkwy-Brooklyn Museum":"Crown Heights \u2014 right at the Brooklyn Museum on Eastern Parkway.","Elder Av":"Soundview, Bronx \u2014 residential area near Elder Avenue.","Elmhurst Av":"Elmhurst, Queens \u2014 diverse neighborhood near Queens Center Mall.","Euclid Av":"East New York, Brooklyn \u2014 eastern terminus of the C train.","Far Rockaway-Mott Av":"Far Rockaway, Queens \u2014 A train terminus near the Rockaway beaches.","Flatbush Av-Brooklyn College":"Flatbush, Brooklyn \u2014 at Brooklyn College, terminus of the 2 and 5.","Flushing Av":"Williamsburg/Bushwick, Brooklyn \u2014 near the Brooklyn Navy Yard.","Flushing-Main St":"Downtown Flushing, Queens \u2014 one of NYC's biggest Chinatowns.","Fordham Rd":"Fordham, Bronx \u2014 major shopping strip near Fordham University.","Forest Av":"Ridgewood, Queens \u2014 near Forest and Myrtle Avenue shops.","Forest Hills-71 Av":"Forest Hills, Queens \u2014 near Austin Street shops and Forest Hills Stadium.","Fort Hamilton Pkwy":"Borough Park/Kensington, Brooklyn \u2014 near Fort Hamilton Parkway.","Franklin Av":"Crown Heights, Brooklyn \u2014 transfer to Franklin Avenue Shuttle.","Franklin Av-Medgar Evers College":"Crown Heights, Brooklyn \u2014 near Medgar Evers College of CUNY.","Franklin St":"Tribeca at Franklin Street, near trendy restaurants and galleries.","Freeman St":"Longwood, Bronx \u2014 near Freeman Street's residential area.","Fresh Pond Rd":"Ridgewood/Middle Village, Queens \u2014 near Fresh Pond Road shops.","Fulton St":"Lower Manhattan \u2014 major hub near the Fulton Center and South Street Seaport.","Gates Av":"Bed-Stuy, Brooklyn \u2014 near the Gates Avenue commercial corridor.","Graham Av":"East Williamsburg, Brooklyn \u2014 near Graham Avenue's dining scene.","Grand Army Plaza":"Prospect Heights \u2014 at the grand arch entrance to Prospect Park.","Grand Av-Newtown":"Elmhurst, Queens \u2014 near Grand Avenue shopping.","Grand Central-42 St":"Grand Central Terminal \u2014 Beaux-Arts landmark, Metro-North hub.","Grand St":"Williamsburg/Chinatown \u2014 serves both B/D in Manhattan and L in Brooklyn.","Grant Av":"East New York/Ozone Park border, near Liberty Avenue.","Greenpoint Av":"Greenpoint, Brooklyn \u2014 Polish and hipster neighborhood on the waterfront.","Gun Hill Rd":"Norwood/Williamsbridge, Bronx \u2014 near Gun Hill Road shopping.","Halsey St":"Bed-Stuy, Brooklyn \u2014 near Halsey Street's row houses.","Harlem-148 St":"Northern terminus of the 3 train, in Central Harlem.","Hewes St":"Williamsburg, Brooklyn \u2014 near the Williamsburg Bridge approach.","High St":"Brooklyn Heights/DUMBO \u2014 near the Brooklyn Bridge and waterfront.","Houston St":"West Village at Houston and Varick, near SoHo.","Howard Beach-JFK Airport":"Howard Beach, Queens \u2014 transfer to AirTrain JFK.","Hoyt St":"Downtown Brooklyn \u2014 near the Fulton Mall shopping district.","Hoyt-Schermerhorn Sts":"Downtown Brooklyn \u2014 often used for filming; connects A/C and G.","Hunters Point Av":"Long Island City, Queens \u2014 near the Hunters Point waterfront parks.","Hunts Point Av":"Hunts Point, Bronx \u2014 near the Hunts Point food distribution center.","Intervale Av":"Longwood, Bronx \u2014 near Intervale Avenue and residential area.","Inwood-207 St":"Inwood, Manhattan \u2014 A train terminus, near Inwood Hill Park.","Jackson Av":"Mott Haven/Longwood, Bronx \u2014 near the Hub commercial district.","Jackson Hts-Roosevelt Av":"Jackson Heights, Queens \u2014 one of NYC's most diverse intersections.","Jamaica Center-Parsons/Archer":"Downtown Jamaica, Queens \u2014 major transit hub for buses and subway.","Jamaica-179 St":"Eastern terminus of the F train, in Jamaica Hills, Queens.","Jamaica-Van Wyck":"Jamaica, Queens \u2014 near the Van Wyck Expressway.","Jay St-MetroTech":"Downtown Brooklyn's tech hub, near Brooklyn Borough Hall.","Jefferson St":"Bushwick, Brooklyn \u2014 residential area along the L line.","Junction Blvd":"Corona, Queens \u2014 near the neighborhood's Latin American community.","Junius St":"Brownsville, Brooklyn \u2014 residential area near Betsy Head Park.","Kew Gardens-Union Tpke":"Kew Gardens, Queens \u2014 near Queens Borough Hall.","Kings Hwy":"Midwood/Gravesend, Brooklyn \u2014 busy shopping street.","Kingsbridge Rd":"Kingsbridge, Bronx \u2014 near Jerome Avenue and the Kingsbridge Armory.","Kingston Av":"Crown Heights, Brooklyn \u2014 center of the Lubavitch Hasidic community.","Kingston-Throop Avs":"Bed-Stuy, Brooklyn \u2014 along Fulton Street's commercial corridor.","Knickerbocker Av":"Bushwick, Brooklyn \u2014 near the Bushwick art scene on Knickerbocker.","Kosciuszko St":"Bed-Stuy, Brooklyn \u2014 named for Polish-American Revolutionary War hero.","Lafayette Av":"Fort Greene, Brooklyn \u2014 near BAM (Brooklyn Academy of Music).","Lexington Av/53 St":"Midtown East at Lexington and 53rd, near the Citigroup Center.","Lexington Av/59 St":"Midtown East, near Bloomingdale's flagship store.","Lexington Av/63 St":"Upper East Side \u2014 Second Avenue Subway transfer, near Central Park.","Liberty Av":"East New York, Brooklyn \u2014 near the Liberty Avenue commercial strip.","Livonia Av":"Brownsville/East New York, Brooklyn \u2014 near Livonia Avenue.","Longwood Av":"Longwood, Bronx \u2014 near historic Longwood Avenue row houses.","Lorimer St":"Williamsburg, Brooklyn \u2014 near McCarren Park and the hipster core.","Marble Hill-225 St":"Marble Hill \u2014 technically Manhattan but connected to the Bronx by land.","Marcy Av":"Williamsburg, Brooklyn \u2014 near the Williamsburg Bridge.","Metropolitan Av":"Williamsburg/East Williamsburg, Brooklyn \u2014 near Metropolitan Avenue shops.","Mets-Willets Point":"Flushing Meadows \u2014 Citi Field (Mets), USTA (US Open), and the 1964 Fair site.","Middle Village-Metropolitan Av":"Middle Village, Queens \u2014 M train terminus near Juniper Valley Park.","Middletown Rd":"Pelham Bay, Bronx \u2014 residential area near Middletown Road.","Montrose Av":"East Williamsburg, Brooklyn \u2014 near Montrose Avenue and Bushwick border.","Morgan Av":"East Williamsburg, Brooklyn \u2014 near Morgan Avenue's warehouse conversions.","Morris Park":"Morris Park, Bronx \u2014 near Albert Einstein College of Medicine.","Morrison Av-Soundview":"Soundview, Bronx \u2014 near Soundview Park on the Bronx River.","Mosholu Pkwy":"Bedford Park, Bronx \u2014 near Mosholu Parkway and the Bronx Zoo.","Mt Eden Av":"Mount Eden, Bronx \u2014 near the Bronx's Grand Concourse.","Myrtle Av":"Bed-Stuy/Clinton Hill, Brooklyn \u2014 near Myrtle Avenue shopping.","Myrtle-Willoughby Avs":"Bed-Stuy, Brooklyn \u2014 near Pratt Institute and Clinton Hill.","Myrtle-Wyckoff Avs":"Bushwick/Ridgewood border \u2014 L/M transfer near Wyckoff Avenue.","Nassau Av":"Greenpoint, Brooklyn \u2014 near McCarren Park and Nassau Avenue shops.","Neck Rd":"Sheepshead Bay, Brooklyn \u2014 residential area near Neck Road.","Neptune Av":"Coney Island, Brooklyn \u2014 near Neptune Avenue and the boardwalk area.","Nereid Av":"Wakefield, Bronx \u2014 near Nereid Avenue, close to the Westchester border.","Nevins St":"Downtown Brooklyn/Boerum Hill \u2014 near the Barclays Center area.","New Lots Av":"East New York, Brooklyn \u2014 terminus for several lines near Linden Blvd.","New Utrecht Av":"Borough Park/Bensonhurst, Brooklyn \u2014 near New Utrecht Avenue.","Newkirk Av-Little Haiti":"Flatbush, Brooklyn \u2014 heart of the Haitian-American community.","Newkirk Plaza":"Flatbush, Brooklyn \u2014 lively open-air plaza with shops and restaurants.","Northern Blvd":"Woodside, Queens \u2014 near Northern Boulevard's auto district.","Norwood Av":"East New York, Brooklyn \u2014 residential area near Norwood Avenue.","Norwood-205 St":"Norwood, Bronx \u2014 D train terminus near Mosholu Parkway.","Nostrand Av":"Crown Heights/Bed-Stuy, Brooklyn \u2014 along Nostrand Avenue.","Ocean Pkwy":"Brighton Beach, Brooklyn \u2014 near Ocean Parkway's greenway.","Ozone Park-Lefferts Blvd":"Ozone Park, Queens \u2014 A train branch terminus at Lefferts Boulevard.","Park Pl":"Prospect Heights, Brooklyn \u2014 Franklin Avenue Shuttle stop near Washington Ave.","Park Place":"Downtown Brooklyn \u2014 near Fulton Mall and City Point.","Parkchester":"Parkchester, Bronx \u2014 a large planned community near Westchester Avenue.","Parkside Av":"Flatbush, Brooklyn \u2014 at the southeast edge of Prospect Park.","Parsons Blvd":"Jamaica, Queens \u2014 near Parsons Boulevard's commercial district.","Pelham Bay Park":"6 train terminus, near Pelham Bay Park and Orchard Beach.","Pelham Pkwy":"Pelham Parkway, Bronx \u2014 near the Bronx Zoo's main entrance.","Pennsylvania Av":"East New York, Brooklyn \u2014 near Pennsylvania Avenue.","President St-Medgar Evers College":"Crown Heights, Brooklyn \u2014 near Medgar Evers College.","Prince St":"SoHo/Nolita \u2014 boutiques, galleries, and cast-iron architecture.","Prospect Av":"South Bronx (2/5) and South Slope, Brooklyn (D/N/R).","Prospect Park":"Prospect Park, Brooklyn \u2014 at the Flatbush Avenue entrance to the park.","Queens Plaza":"Long Island City, Queens \u2014 near Queens Plaza and the Queensboro Bridge.","Queensboro Plaza":"Long Island City \u2014 elevated station with Manhattan skyline views.","Ralph Av":"Bed-Stuy, Brooklyn \u2014 along Ralph Avenue and Fulton Street.","Rector St":"Financial District \u2014 near Trinity Church and the 9/11 Memorial.","Rockaway Av":"Brownsville, Brooklyn \u2014 near Rockaway Avenue.","Rockaway Blvd":"South Ozone Park, Queens \u2014 near Rockaway Boulevard.","Rockaway Park-Beach 116 St":"Rockaway Park, Queens \u2014 near the Rockaway Beach boardwalk.","Roosevelt Island":"Roosevelt Island \u2014 the aerial tram and FDR Four Freedoms Park.","Saratoga Av":"Brownsville, Brooklyn \u2014 near Saratoga Avenue.","Seneca Av":"Ridgewood, Queens \u2014 near Seneca Avenue's residential area.","Sheepshead Bay":"Sheepshead Bay, Brooklyn \u2014 waterfront fishing boats and seafood.","Shepherd Av":"East New York, Brooklyn \u2014 residential area near Shepherd Avenue.","Simpson St":"Longwood, Bronx \u2014 near Simpson Street and Fox Square.","Smith-9 Sts":"Gowanus, Brooklyn \u2014 highest outdoor station in the system.","South Ferry":"Southern tip of Manhattan \u2014 Staten Island Ferry terminal at Battery Park.","Spring St":"SoHo/Nolita \u2014 near the SoHo cast-iron historic district.","St Lawrence Av":"Soundview, Bronx \u2014 residential area near St. Lawrence Avenue.","Steinway St":"Astoria, Queens \u2014 named for the Steinway piano factory nearby.","Sterling St":"Prospect Lefferts Gardens, Brooklyn \u2014 residential tree-lined street.","Sutphin Blvd":"Jamaica, Queens \u2014 near the downtown Jamaica commercial district.","Sutphin Blvd-Archer Av-JFK Airport":"Jamaica, Queens \u2014 transfer to AirTrain JFK at the Archer Avenue hub.","Sutter Av":"Brownsville, Brooklyn \u2014 L train stop near Sutter Avenue.","Sutter Av-Rutland Rd":"Crown Heights/East Flatbush, Brooklyn \u2014 near Rutland Road.","Times Sq-42 St":"Heart of Midtown \u2014 Broadway theaters, bright lights, the Crossroads of the World.","Tremont Av":"Tremont, Bronx \u2014 along the Grand Concourse, near Bronx Zoo.","Union St":"Park Slope, Brooklyn \u2014 near Union Street's brownstone blocks.","Utica Av":"Crown Heights, Brooklyn \u2014 A/C stop at Fulton and Utica, major bus hub.","Van Cortlandt Park-242 St":"1 train terminus \u2014 entrance to Van Cortlandt Park's trails.","Van Siclen Av":"East New York, Brooklyn \u2014 near Van Siclen Avenue.","Vernon Blvd-Jackson Av":"Long Island City, Queens \u2014 near Gantry Plaza State Park.","W 4 St-Wash Sq":"Greenwich Village at Washington Square Park \u2014 NYU's front yard.","W 8 St-NY Aquarium":"Coney Island boardwalk \u2014 right at the New York Aquarium.","WTC Cortlandt":"World Trade Center \u2014 rebuilt station at the 9/11 Memorial site.","Wakefield-241 St":"Wakefield, Bronx \u2014 2 train terminus near the Westchester border.","Wall St":"Financial District \u2014 near the New York Stock Exchange and Federal Hall.","West Farms Sq-E Tremont Av":"West Farms, Bronx \u2014 near the Bronx Zoo's Southern Boulevard entrance.","Westchester Sq-E Tremont Av":"Westchester Square, Bronx \u2014 near the historic town square.","Whitehall St-South Ferry":"Southern tip of Manhattan \u2014 near the Staten Island Ferry and Battery Park.","Whitlock Av":"Hunts Point, Bronx \u2014 near the Hunts Point food markets.","Wilson Av":"Bushwick, Brooklyn \u2014 near Wilson Avenue's residential blocks.","Winthrop St":"Prospect Lefferts Gardens, Brooklyn \u2014 near Kings County Hospital.","Woodhaven Blvd":"Woodhaven, Queens \u2014 near Forest Park and Queens Boulevard.","Woodlawn":"Woodlawn, Bronx \u2014 4 train terminus, near Woodlawn Cemetery.","World Trade Center":"E train terminus at the World Trade Center and the Oculus.","York St":"DUMBO, Brooklyn \u2014 near the Brooklyn Bridge and waterfront parks.","Zerega Av":"Castle Hill, Bronx \u2014 near Zerega Avenue industrial area."};
+
+// ── Station Coordinates [lat, lng] ──
+const STATION_COORDS = {"1 Av":[40.730953,-73.981628],"103 St":[40.799446,-73.968379],"103 St-Corona Plaza":[40.749865,-73.8627],"104 St":[40.681711,-73.837683],"110 St":[40.79502,-73.94425],"110 St-Malcolm X Plaza":[40.799075,-73.951822],"111 St":[40.75173,-73.855334],"116 St":[40.802098,-73.949625],"116 St-Columbia University":[40.807722,-73.96411],"121 St":[40.700492,-73.828294],"125 St":[40.815581,-73.958372],"135 St":[40.814229,-73.94077],"137 St-City College":[40.822008,-73.953676],"138 St-Grand Concourse":[40.813224,-73.929849],"14 St":[40.737826,-74.000201],"14 St-Union Sq":[40.734673,-73.989951],"145 St":[40.826551,-73.95036],"149 St-Grand Concourse":[40.81841,-73.926718],"15 St-Prospect Park":[40.660365,-73.979493],"155 St":[40.830518,-73.941514],"157 St":[40.834041,-73.94489],"161 St-Yankee Stadium":[40.827994,-73.925831],"163 St-Amsterdam Av":[40.836013,-73.939892],"167 St":[40.835537,-73.9214],"168 St":[40.840719,-73.939561],"168 St-Washington Hts":[40.840556,-73.940133],"169 St":[40.71047,-73.793604],"170 St":[40.840075,-73.917791],"174 St":[40.837288,-73.887734],"174-175 Sts":[40.8459,-73.910136],"175 St":[40.847391,-73.939704],"176 St":[40.84848,-73.911794],"18 Av":[40.607954,-74.001736],"18 St":[40.74104,-73.997871],"181 St":[40.849505,-73.933596],"182-183 Sts":[40.856093,-73.900741],"183 St":[40.858407,-73.903879],"190 St":[40.859022,-73.93418],"191 St":[40.855225,-73.929412],"2 Av":[40.723402,-73.989938],"20 Av":[40.604556,-73.998168],"207 St":[40.864621,-73.918822],"21 St":[40.744065,-73.949724],"21 St-Queensbridge":[40.754203,-73.942836],"215 St":[40.869444,-73.915279],"219 St":[40.883895,-73.862633],"225 St":[40.888022,-73.860341],"23 St":[40.744081,-73.995657],"23 St-Baruch College":[40.739864,-73.986599],"231 St":[40.878856,-73.904834],"233 St":[40.893193,-73.857473],"238 St":[40.884667,-73.90087],"25 Av":[40.597704,-73.986829],"25 St":[40.660397,-73.998091],"28 St":[40.747215,-73.993365],"3 Av":[40.732849,-73.986122],"3 Av-138 St":[40.810476,-73.926138],"3 Av-149 St":[40.816109,-73.917757],"30 Av":[40.766779,-73.921479],"33 St":[40.746081,-73.982076],"33 St-Rawson St":[40.744587,-73.930997],"34 St-Herald Sq":[40.749719,-73.987823],"34 St-Hudson Yards":[40.755882,-74.00191],"34 St-Penn Station":[40.750373,-73.991057],"36 Av":[40.756804,-73.929575],"36 St":[40.752039,-73.928781],"39 Av-Dutch Kills":[40.752882,-73.932755],"4 Av-9 St":[40.670272,-73.989779],"40 St-Lowery St":[40.743781,-73.924016],"42 St-Bryant Pk":[40.754222,-73.984569],"42 St-Port Authority Bus Terminal":[40.757308,-73.989735],"45 St":[40.648939,-74.010006],"46 St":[40.756312,-73.913333],"46 St-Bliss St":[40.743132,-73.918435],"47-50 Sts-Rockefeller Ctr":[40.758663,-73.981329],"49 St":[40.759901,-73.984139],"5 Av":[40.753821,-73.981963],"5 Av/53 St":[40.760167,-73.975224],"5 Av/59 St":[40.764811,-73.973347],"50 St":[40.761728,-73.983849],"51 St":[40.757107,-73.97192],"52 St":[40.744149,-73.912549],"53 St":[40.645069,-74.014034],"55 St":[40.631435,-73.995476],"57 St":[40.763972,-73.97745],"57 St-7 Av":[40.764664,-73.980658],"59 St":[40.762526,-73.967967],"59 St-Columbus Circle":[40.768247,-73.981929],"6 Av":[40.737335,-73.996786],"61 St-Woodside":[40.74563,-73.902984],"62 St":[40.626472,-73.996895],"63 Dr-Rego Park":[40.729846,-73.861604],"65 St":[40.749669,-73.898453],"66 St-Lincoln Center":[40.77344,-73.982209],"67 Av":[40.726523,-73.852719],"68 St-Hunter College":[40.768141,-73.96387],"69 St":[40.746325,-73.896403],"7 Av":[40.762862,-73.981637],"71 St":[40.619589,-73.998864],"72 St":[40.778453,-73.98197],"74 St-Broadway":[40.746848,-73.891394],"75 Av":[40.718331,-73.837324],"75 St-Elderts Ln":[40.691324,-73.867139],"77 St":[40.77362,-73.959874],"79 St":[40.783934,-73.979917],"8 Av":[40.739777,-74.002578],"8 St-NYU":[40.730328,-73.992629],"80 St":[40.679371,-73.858992],"81 St-Museum of Natural History":[40.781433,-73.972143],"82 St-Jackson Hts":[40.747659,-73.883697],"85 St-Forest Pkwy":[40.692435,-73.86001],"86 St":[40.788644,-73.976218],"88 St":[40.679843,-73.85147],"9 Av":[40.646292,-73.994324],"90 St-Elmhurst Av":[40.748408,-73.876613],"96 St":[40.793919,-73.972323],"Alabama Av":[40.676992,-73.898654],"Allerton Av":[40.865462,-73.867352],"Aqueduct Racetrack":[40.672097,-73.835919],"Aqueduct-N Conduit Av":[40.668234,-73.834058],"Astor Pl":[40.730054,-73.99107],"Astoria Blvd":[40.770258,-73.917843],"Astoria-Ditmars Blvd":[40.775036,-73.912034],"Atlantic Av":[40.675345,-73.903097],"Atlantic Av-Barclays Ctr":[40.684359,-73.977666],"Avenue H":[40.62927,-73.961639],"Avenue I":[40.625322,-73.976127],"Avenue J":[40.625039,-73.960803],"Avenue M":[40.617618,-73.959399],"Avenue N":[40.61514,-73.974197],"Avenue P":[40.608944,-73.973022],"Avenue U":[40.5993,-73.955929],"Avenue X":[40.58962,-73.97425],"Bay 50 St":[40.588841,-73.983765],"Bay Pkwy":[40.601875,-73.993728],"Bay Ridge Av":[40.634967,-74.023377],"Bay Ridge-95 St":[40.616622,-74.030876],"Baychester Av":[40.878663,-73.838591],"Beach 105 St":[40.583209,-73.827559],"Beach 25 St":[40.600066,-73.761353],"Beach 36 St":[40.595398,-73.768175],"Beach 44 St":[40.592943,-73.776013],"Beach 60 St":[40.592374,-73.788522],"Beach 67 St":[40.590927,-73.796924],"Beach 90 St":[40.588034,-73.813641],"Beach 98 St":[40.585307,-73.820558],"Bedford Av":[40.717304,-73.956872],"Bedford Park Blvd":[40.873244,-73.887138],"Bedford Park Blvd-Lehman College":[40.873412,-73.890064],"Bedford-Nostrand Avs":[40.689627,-73.953522],"Bergen St":[40.680829,-73.975098],"Beverley Rd":[40.644031,-73.964492],"Beverly Rd":[40.645098,-73.948959],"Bleecker St":[40.725915,-73.994659],"Borough Hall":[40.693219,-73.989998],"Botanic Garden":[40.670343,-73.959245],"Bowery":[40.72028,-73.993915],"Bowling Green":[40.704817,-74.014065],"Briarwood":[40.709179,-73.820574],"Brighton Beach":[40.577621,-73.961376],"Broad Channel":[40.608382,-73.815925],"Broad St":[40.706476,-74.011056],"Broadway":[40.706092,-73.950308],"Broadway Junction":[40.678334,-73.905316],"Broadway-Lafayette St":[40.725297,-73.996204],"Bronx Park East":[40.848828,-73.868457],"Brook Av":[40.807566,-73.91924],"Brooklyn Bridge-City Hall":[40.713065,-74.004131],"Buhre Av":[40.84681,-73.832569],"Burke Av":[40.871356,-73.867164],"Burnside Av":[40.853453,-73.907684],"Bushwick Av-Aberdeen St":[40.682829,-73.905249],"Canal St":[40.722854,-74.006277],"Canarsie-Rockaway Pkwy":[40.646654,-73.90185],"Carroll St":[40.680303,-73.995048],"Castle Hill Av":[40.834255,-73.851222],"Cathedral Pkwy (110 St)":[40.803967,-73.966847],"Central Av":[40.697857,-73.927397],"Chambers St":[40.715478,-74.009266],"Chauncey St":[40.682893,-73.910456],"Christopher St-Stonewall":[40.733422,-74.002906],"Church Av":[40.650843,-73.949575],"City Hall":[40.713282,-74.006978],"Clark St":[40.697466,-73.993086],"Classon Av":[40.688873,-73.96007],"Cleveland St":[40.679947,-73.884639],"Clinton-Washington Avs":[40.683263,-73.965838],"Coney Island-Stillwell Av":[40.577422,-73.981233],"Cortelyou Rd":[40.640927,-73.963891],"Cortlandt St":[40.710668,-74.011029],"Court Sq":[40.747023,-73.945264],"Court Sq-23 St":[40.747846,-73.946],"Court St":[40.6941,-73.991777],"Crescent St":[40.683194,-73.873785],"Crown Hts-Utica Av":[40.668897,-73.932942],"Cypress Av":[40.805368,-73.914042],"Cypress Hills":[40.689941,-73.87255],"DeKalb Av":[40.703811,-73.918425],"Delancey St-Essex St":[40.718611,-73.988114],"Ditmas Av":[40.636119,-73.978172],"Dyckman St":[40.860531,-73.925536],"E 143 St-St Mary's St":[40.808719,-73.907657],"E 149 St":[40.812118,-73.904098],"E 180 St":[40.841894,-73.873488],"East 105 St":[40.650573,-73.899485],"East Broadway":[40.713715,-73.990173],"Eastchester-Dyre Av":[40.8883,-73.830834],"Eastern Pkwy-Brooklyn Museum":[40.671987,-73.964375],"Elder Av":[40.828584,-73.879159],"Elmhurst Av":[40.742454,-73.882017],"Euclid Av":[40.675377,-73.872106],"Far Rockaway-Mott Av":[40.603995,-73.755405],"Flatbush Av-Brooklyn College":[40.632836,-73.947642],"Flushing Av":[40.700377,-73.950234],"Flushing-Main St":[40.7596,-73.83003],"Fordham Rd":[40.862803,-73.901034],"Forest Av":[40.704423,-73.903077],"Forest Hills-71 Av":[40.721691,-73.844521],"Fort Hamilton Pkwy":[40.640914,-73.994304],"Franklin Av":[40.68138,-73.956848],"Franklin Av-Medgar Evers College":[40.670682,-73.958131],"Franklin St":[40.719318,-74.006886],"Freeman St":[40.829993,-73.891865],"Fresh Pond Rd":[40.706186,-73.895877],"Fulton St":[40.709416,-74.006571],"Gates Av":[40.68963,-73.92227],"Graham Av":[40.714565,-73.944053],"Grand Army Plaza":[40.675235,-73.971046],"Grand Av-Newtown":[40.737015,-73.877223],"Grand Central-42 St":[40.751776,-73.976848],"Grand St":[40.718267,-73.993753],"Grant Av":[40.677044,-73.86505],"Greenpoint Av":[40.731352,-73.954449],"Gun Hill Rd":[40.87785,-73.866256],"Halsey St":[40.68637,-73.916559],"Harlem-148 St":[40.82388,-73.93647],"Hewes St":[40.70687,-73.953431],"High St":[40.699337,-73.990531],"Houston St":[40.728251,-74.005367],"Howard Beach-JFK Airport":[40.660476,-73.830301],"Hoyt St":[40.690545,-73.985065],"Hoyt-Schermerhorn Sts":[40.688484,-73.985001],"Hunters Point Av":[40.742216,-73.948916],"Hunts Point Av":[40.820948,-73.890549],"Intervale Av":[40.822181,-73.896736],"Inwood-207 St":[40.868072,-73.919899],"Jackson Av":[40.81649,-73.907807],"Jackson Hts-Roosevelt Av":[40.746644,-73.891338],"Jamaica Center-Parsons/Archer":[40.702147,-73.801109],"Jamaica-179 St":[40.712646,-73.783817],"Jamaica-Van Wyck":[40.702566,-73.816859],"Jay St-MetroTech":[40.692338,-73.987342],"Jefferson St":[40.706607,-73.922913],"Junction Blvd":[40.749145,-73.869527],"Junius St":[40.663515,-73.902447],"Kew Gardens-Union Tpke":[40.714441,-73.831008],"Kings Hwy":[40.60867,-73.957734],"Kingsbridge Rd":[40.86776,-73.897174],"Kingston Av":[40.669399,-73.942161],"Kingston-Throop Avs":[40.679921,-73.940858],"Knickerbocker Av":[40.698664,-73.919711],"Kosciuszko St":[40.693342,-73.928814],"Lafayette Av":[40.686113,-73.973946],"Lexington Av/53 St":[40.757552,-73.969055],"Lexington Av/59 St":[40.76266,-73.967258],"Lexington Av/63 St":[40.764629,-73.966113],"Liberty Av":[40.674542,-73.896548],"Livonia Av":[40.664038,-73.900571],"Longwood Av":[40.816104,-73.896435],"Lorimer St":[40.714063,-73.950275],"Marble Hill-225 St":[40.874561,-73.909831],"Marcy Av":[40.708359,-73.957757],"Metropolitan Av":[40.712792,-73.951418],"Mets-Willets Point":[40.754622,-73.845625],"Middle Village-Metropolitan Av":[40.711396,-73.889601],"Middletown Rd":[40.843863,-73.836322],"Montrose Av":[40.707739,-73.93985],"Morgan Av":[40.706152,-73.933147],"Morris Park":[40.854364,-73.860495],"Morrison Av-Soundview":[40.829521,-73.874516],"Mosholu Pkwy":[40.87975,-73.884655],"Mt Eden Av":[40.844434,-73.914685],"Myrtle Av":[40.697207,-73.935657],"Myrtle-Willoughby Avs":[40.694568,-73.949046],"Myrtle-Wyckoff Avs":[40.699814,-73.911586],"Nassau Av":[40.724635,-73.951277],"Neck Rd":[40.595246,-73.955161],"Neptune Av":[40.581011,-73.974574],"Nereid Av":[40.898379,-73.854376],"Nevins St":[40.688246,-73.980492],"New Lots Av":[40.666235,-73.884079],"New Utrecht Av":[40.624842,-73.996353],"Newkirk Av-Little Haiti":[40.639967,-73.948411],"Newkirk Plaza":[40.635082,-73.962793],"Northern Blvd":[40.752885,-73.906006],"Norwood Av":[40.68141,-73.880039],"Norwood-205 St":[40.874811,-73.878855],"Nostrand Av":[40.669847,-73.950466],"Ocean Pkwy":[40.576312,-73.968501],"Ozone Park-Lefferts Blvd":[40.685951,-73.825798],"Park Pl":[40.674772,-73.957624],"Park Place":[40.713051,-74.008811],"Parkchester":[40.833226,-73.860816],"Parkside Av":[40.655292,-73.961495],"Parsons Blvd":[40.707564,-73.803326],"Pelham Bay Park":[40.852462,-73.828121],"Pelham Pkwy":[40.857192,-73.867615],"Pennsylvania Av":[40.664635,-73.894895],"President St-Medgar Evers College":[40.667883,-73.950683],"Prince St":[40.724329,-73.997702],"Prospect Av":[40.819585,-73.90177],"Prospect Park":[40.661614,-73.962246],"Queens Plaza":[40.748973,-73.937243],"Queensboro Plaza":[40.750582,-73.940202],"Ralph Av":[40.678822,-73.920786],"Rector St":[40.707513,-74.013783],"Rockaway Av":[40.662549,-73.908946],"Rockaway Blvd":[40.680429,-73.843853],"Rockaway Park-Beach 116 St":[40.580903,-73.835592],"Roosevelt Island":[40.759145,-73.95326],"Saratoga Av":[40.661453,-73.916327],"Seneca Av":[40.702762,-73.90774],"Sheepshead Bay":[40.586896,-73.954155],"Shepherd Av":[40.67413,-73.88075],"Simpson St":[40.824073,-73.893064],"Smith-9 Sts":[40.67358,-73.995959],"South Ferry":[40.702068,-74.013664],"Spring St":[40.722301,-73.997141],"St Lawrence Av":[40.831509,-73.867618],"Steinway St":[40.756879,-73.92074],"Sterling St":[40.662742,-73.95085],"Sutphin Blvd":[40.70546,-73.810708],"Sutphin Blvd-Archer Av-JFK Airport":[40.700486,-73.807969],"Sutter Av":[40.669367,-73.901975],"Sutter Av-Rutland Rd":[40.664717,-73.92261],"Times Sq-42 St":[40.75529,-73.987495],"Tremont Av":[40.85041,-73.905227],"Union St":[40.677316,-73.98311],"Utica Av":[40.679364,-73.930729],"Van Cortlandt Park-242 St":[40.889248,-73.898583],"Van Siclen Av":[40.665449,-73.889395],"Vernon Blvd-Jackson Av":[40.742626,-73.953581],"W 4 St-Wash Sq":[40.732338,-74.000495],"W 8 St-NY Aquarium":[40.576127,-73.975939],"WTC Cortlandt":[40.711835,-74.012188],"Wakefield-241 St":[40.903125,-73.85062],"Wall St":[40.706821,-74.0091],"West Farms Sq-E Tremont Av":[40.840295,-73.880049],"Westchester Sq-E Tremont Av":[40.839892,-73.842952],"Whitehall St-South Ferry":[40.703087,-74.012994],"Whitlock Av":[40.826525,-73.886283],"Wilson Av":[40.688764,-73.904046],"Winthrop St":[40.656652,-73.9502],"Woodhaven Blvd":[40.733106,-73.869229],"Woodlawn":[40.886037,-73.878751],"World Trade Center":[40.712582,-74.009781],"York St":[40.701397,-73.986751],"Zerega Av":[40.836488,-73.847036]};
 
 // ── MTA Line Colors ──
 const LINE_COLORS = {
@@ -407,7 +504,14 @@ const LINE_COLORS = {
 };
 const YELLOW_LINES = new Set(["N","Q","R","W"]);
 const LINE_ORDER = ["1","2","3","4","5","6","7","A","B","C","D","E","F","G","J","Z","L","M","N","Q","R","W","S"];
-const ACTIVE_LINE = 'Q';
+function getActiveLine() {
+  return localStorage.getItem('subway_active_line') || null;
+}
+function setActiveLine(line) {
+  localStorage.setItem('subway_active_line', line);
+}
+// For backward compat, ACTIVE_LINE is a getter
+Object.defineProperty(window, 'ACTIVE_LINE', { get: getActiveLine });
 
 // ── Router ──
 function navigate(hash) {
@@ -421,20 +525,25 @@ function route() {
   const path = hash.replace('#/', '').replace('#', '');
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 
+  // Check if we need line selection
+  if (!getActiveLine() && path !== 'pick-line') {
+    document.getElementById('line-picker').classList.add('active');
+    renderPickerGrid();
+    return;
+  }
+
   if (path === '' || path === '/') {
     document.getElementById('home').classList.add('active');
     updateHomeStats();
+  } else if (path === 'pick-line') {
+    document.getElementById('line-picker').classList.add('active');
+    renderPickerGrid();
   } else if (path === 'fill-the-line') {
     document.getElementById('line-selector').classList.add('active');
     renderLineGrid();
-  } else if (path === 'transfer-quiz') {
-    document.getElementById('transfer-quiz').classList.add('active');
-    startTransferQuiz();
-  } else if (path === 'neighborhood') {
-    document.getElementById('neighborhood').classList.add('active');
-    startNeighborhood();
-  } else if (path === 'stats') {
-    document.getElementById('stats').classList.add('active');
+  } else if (path === 'progress') {
+    document.getElementById('progress').classList.add('active');
+    renderProgress();
   }
 }
 
@@ -442,57 +551,31 @@ window.addEventListener('hashchange', route);
 window.addEventListener('load', route);
 
 // ── Home Stats ──
-function updateHomeStats() {
-  const badge = document.getElementById('home-line-badge');
-  badge.style.background = LINE_COLORS[ACTIVE_LINE];
-  badge.textContent = ACTIVE_LINE;
-  badge.style.color = YELLOW_LINES.has(ACTIVE_LINE) ? '#000' : '#fff';
-  const stats = loadStats();
-  const ftl = stats.fill_the_line || {};
-  let above70 = 0;
-  for (const line of LINE_ORDER) {
-    if (ftl[line] && ftl[line].recall_rate > 0.7) above70++;
-  }
-  // For S shuttles, check each shuttle
-  if (ftl['S_Rockaway Park Shuttle'] && ftl['S_Rockaway Park Shuttle'].recall_rate > 0.7) above70++;
-  if (ftl['S_Franklin Av Shuttle'] && ftl['S_Franklin Av Shuttle'].recall_rate > 0.7) above70++;
-  if (ftl['S_42 St Shuttle'] && ftl['S_42 St Shuttle'].recall_rate > 0.7) above70++;
-
-  document.getElementById('ftl-stat').textContent = above70 + ' of 23 lines above 70%';
-
-  const tq = stats.transfer_quiz || {};
-  let mastered = 0;
-  for (const st of Object.values(tq)) {
-    if (st.times_correct >= 3) mastered++;
-  }
-  document.getElementById('tq-stat').textContent = mastered + ' transfer stations mastered';
-
-  const nh = stats.neighborhood || {};
-  let nhTotal = 0;
-  for (const v of Object.values(nh)) {
-    nhTotal += (v.times_seen || 0);
-  }
-  document.getElementById('nh-stat').textContent = nhTotal + ' questions answered';
-}
-
 // ── Line Grid ──
 function renderLineGrid() {
   const grid = document.getElementById('line-grid');
   grid.innerHTML = '';
   document.getElementById('shuttle-selector').style.display = 'none';
+  const unlocked = getUnlockedLines();
 
   for (const line of LINE_ORDER) {
     const badge = document.createElement('div');
+    const isUnlocked = line === 'S' || unlocked.has(line);
     badge.className = 'line-badge' + (YELLOW_LINES.has(line) ? ' yellow-line' : '');
     badge.style.background = LINE_COLORS[line];
     badge.textContent = line;
-    badge.onclick = () => {
-      if (line === 'S') {
-        showShuttleSelector();
-      } else {
-        startGame(line);
-      }
-    };
+    if (isUnlocked) {
+      badge.onclick = () => {
+        if (line === 'S') {
+          showShuttleSelector();
+        } else {
+          startGame(line);
+        }
+      };
+    } else {
+      badge.style.opacity = '0.35';
+      badge.style.cursor = 'not-allowed';
+    }
     grid.appendChild(badge);
   }
 }
@@ -541,15 +624,24 @@ function startGame(line, shuttle) {
   guessCount = 0;
   filledByPlayer = 0;
   firstTryStations = [];
+  missedStations = [];
   streak = 0;
   gameOver = false;
 
-  // Sample a consecutive slice of stops
+  // Sample a consecutive slice of stops, weighted toward unknown stations
   if (allStops.length <= GAME_SIZE) {
     stops = [...allStops];
   } else {
+    const stats = loadStats();
+    const ftl = stats.fill_the_line?.[currentLineKey] || {};
+    const knownSet = new Set(ftl.known_stations || []);
     const maxStart = allStops.length - GAME_SIZE;
-    const startIdx = Math.floor(Math.random() * (maxStart + 1));
+    const startIndices = Array.from({ length: maxStart + 1 }, (_, i) => i);
+    const startIdx = weightedPick(startIndices, (i) => {
+      const slice = allStops.slice(i, i + GAME_SIZE);
+      const unknownCount = slice.filter(s => !knownSet.has(s)).length;
+      return unknownCount + 1; // +1 so known slices still have some chance
+    });
     stops = allStops.slice(startIdx, startIdx + GAME_SIZE);
   }
 
@@ -583,6 +675,14 @@ function startGame(line, shuttle) {
   renderStops();
   updateGameStats();
   document.getElementById('choice-area').style.display = 'block';
+  gameMapMarkers = [];
+  showRegionMap('game-map', stops);
+  // Mark anchor stations on the map
+  setTimeout(() => {
+    for (const idx of anchorIndices) {
+      addStationMarker('game-map', stops[idx], line);
+    }
+  }, 200);
   advanceToNextBlank();
 }
 
@@ -634,6 +734,7 @@ function updateGameStats() {
 let currentBlankIdx = -1;
 let wrongGuesses = 0;
 let firstTryStations = []; // stations gotten right on first try this round
+let missedStations = []; // stations where player guessed wrong at least once
 let streak = 0;
 
 function getDecoyStations(correctStation, count) {
@@ -713,15 +814,19 @@ function handleChoice(btn, picked, correct) {
       firstTryStations.push(stops[currentBlankIdx]);
       streak++;
     } else {
+      missedStations.push(stops[currentBlankIdx]);
       streak = 0;
     }
     updateStreak();
     revealStop(currentBlankIdx, true);
     updateGameStats();
-    setTimeout(() => advanceToNextBlank(), 500);
+    // Flash green and auto-advance
+    document.querySelectorAll('#choices .choice-btn').forEach(b => { b.disabled = true; });
+    setTimeout(() => advanceToNextBlank(), 800);
   } else {
     wrongGuesses++;
     btn.classList.add('wrong');
+    btn.disabled = true;
     // Show context on first wrong guess for this blank
     if (wrongGuesses === 1) showContext(stops[currentBlankIdx]);
   }
@@ -747,23 +852,28 @@ function revealStop(idx, animate) {
     const borough = SUBWAY_DATA.stations[stops[idx]]?.borough || '';
     nameEl.innerHTML = stops[idx] + '<span class="borough">' + borough + '</span>';
   }
+  if (animate) addStationMarker('game-map', stops[idx], currentLine);
 }
 
 function endGame(gaveUp) {
   gameOver = true;
   document.getElementById('choice-area').style.display = 'none';
 
-  const totalBlanks = stops.length - anchorIndices.size;
-
   // Save stats
   saveGameStats(currentLineKey);
 
-  // Compute line-wide recall from saved stats
+  if (sessionStationMode) {
+    sessionStationMode = false;
+    sessionQuestionDone(filledByPlayer > 0);
+    return;
+  }
+
+  // Standalone mode — show end screen
+  const totalBlanks = stops.length - anchorIndices.size;
   const saved = loadStats().fill_the_line?.[currentLineKey] || {};
   const lineRecall = saved.recall_rate || 0;
   const knownCount = (saved.known_stations || []).length;
 
-  // Show end screen after a moment
   setTimeout(() => {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('end-screen').classList.add('active');
@@ -778,6 +888,380 @@ function endGame(gaveUp) {
       startGame(currentLine, currentShuttle);
     };
   }, 400);
+}
+
+// ── Line Picker ──
+function renderPickerGrid() {
+  const grid = document.getElementById('picker-grid');
+  grid.innerHTML = '';
+  for (const line of LINE_ORDER) {
+    if (line === 'S') continue;
+    const badge = document.createElement('div');
+    badge.className = 'line-badge' + (YELLOW_LINES.has(line) ? ' yellow-line' : '');
+    badge.style.background = LINE_COLORS[line];
+    badge.textContent = line;
+    badge.onclick = () => {
+      setActiveLine(line);
+      navigate('');
+    };
+    grid.appendChild(badge);
+  }
+}
+
+// ── Mastery Computation ──
+function getLineMastery(line) {
+  const stats = loadStats();
+  const lineStops = SUBWAY_DATA.lines[line]?.stops || [];
+  if (lineStops.length === 0) return { station: 0, transfer: 0, neighborhood: 0, composite: 0 };
+
+  // Station quiz: % of known stations
+  const ftl = stats.fill_the_line?.[line] || {};
+  const knownStations = (ftl.known_stations || []).length;
+  const stationScore = lineStops.length > 0 ? knownStations / lineStops.length : 0;
+
+  // Transfer quiz: % of transfer stations mastered (correct >= 3)
+  const tq = stats.transfer_quiz || {};
+  const transferStops = lineStops.filter(s => (SUBWAY_DATA.stations[s]?.lines.length || 0) >= 2);
+  let transferMastered = 0;
+  for (const s of transferStops) {
+    if (tq[s] && tq[s].times_correct >= 3) transferMastered++;
+  }
+  const transferScore = transferStops.length > 0 ? transferMastered / transferStops.length : 0;
+
+  // Neighborhood: % of stations with correct >= 3
+  const nh = stats.neighborhood || {};
+  let nhMastered = 0;
+  for (const s of lineStops) {
+    // Check all question types for this station
+    let totalCorrect = 0;
+    for (const key of Object.keys(nh)) {
+      if (key.includes(':' + s + ':')) totalCorrect += (nh[key].times_correct || 0);
+    }
+    if (totalCorrect >= 3) nhMastered++;
+  }
+  const nhScore = lineStops.length > 0 ? nhMastered / lineStops.length : 0;
+
+  const composite = (stationScore + transferScore + nhScore) / 3;
+  return { station: stationScore, transfer: transferScore, neighborhood: nhScore, composite };
+}
+
+function getUnlockedLines() {
+  const stats = loadStats();
+  const unlocked = new Set();
+  const active = getActiveLine();
+  if (active) unlocked.add(active);
+
+  // Check all lines for mastery
+  for (const line of LINE_ORDER) {
+    if (line === 'S') continue;
+    const mastery = getLineMastery(line);
+    if (mastery.composite >= 0.7) {
+      unlocked.add(line);
+      // Unlock connected lines via transfers
+      const stops = SUBWAY_DATA.lines[line]?.stops || [];
+      for (const s of stops) {
+        const stData = SUBWAY_DATA.stations[s];
+        if (stData) {
+          for (const l of stData.lines) {
+            if (l !== 'S') unlocked.add(l);
+          }
+        }
+      }
+    }
+  }
+  return unlocked;
+}
+
+function getWeakestArea(line) {
+  const m = getLineMastery(line);
+  if (m.station <= m.transfer && m.station <= m.neighborhood) return 'station';
+  if (m.transfer <= m.neighborhood) return 'transfer';
+  return 'neighborhood';
+}
+
+// ── Unified Mixed Session ──
+let sessionQuestions = [];
+let sessionIdx = 0;
+let sessionCorrect = 0;
+const SESSION_SIZE = 10;
+
+function startMixedSession() {
+  const line = getActiveLine();
+  if (!line) { navigate('pick-line'); return; }
+
+  sessionQuestions = [];
+  sessionIdx = 0;
+  sessionCorrect = 0;
+
+  // Build 10 questions, weighted by weakness
+  const mastery = getLineMastery(line);
+  const weights = {
+    station: 1 - mastery.station,
+    transfer: 1 - mastery.transfer,
+    neighborhood: 1 - mastery.neighborhood
+  };
+  const totalWeight = weights.station + weights.transfer + weights.neighborhood;
+
+  for (let i = 0; i < SESSION_SIZE; i++) {
+    let r = Math.random() * totalWeight;
+    let type;
+    if (r < weights.station) type = 'station';
+    else if (r < weights.station + weights.transfer) type = 'transfer';
+    else type = 'neighborhood';
+
+    // Check if type is viable
+    const transferStops = (SUBWAY_DATA.lines[line]?.stops || []).filter(s => (SUBWAY_DATA.stations[s]?.lines.length || 0) >= 2);
+    if (type === 'transfer' && transferStops.length < 2) type = 'station';
+    if (type === 'station' && (SUBWAY_DATA.lines[line]?.stops.length || 0) < 5) type = 'neighborhood';
+
+    sessionQuestions.push({ type });
+  }
+
+  showSessionQuestion();
+}
+
+function showSessionQuestion() {
+  if (sessionIdx >= sessionQuestions.length) {
+    showSessionEnd();
+    return;
+  }
+
+  const q = sessionQuestions[sessionIdx];
+  const line = getActiveLine();
+
+  if (q.type === 'station') {
+    // Start a mini station quiz round (5 blanks)
+    startGame(line);
+    // Override the endGame to come back to session
+    sessionStationMode = true;
+  } else if (q.type === 'transfer') {
+    startTransferQuizSingle(line);
+  } else {
+    startNeighborhoodSingle(line);
+  }
+}
+
+// Single transfer question for mixed session
+let sessionStationMode = false;
+
+function startTransferQuizSingle(line) {
+  const lineStops = SUBWAY_DATA.lines[line]?.stops || [];
+  const transferStops = lineStops.filter(s => (SUBWAY_DATA.stations[s]?.lines.length || 0) >= 2);
+  if (transferStops.length === 0) { sessionIdx++; showSessionQuestion(); return; }
+
+  const station = transferStops[Math.floor(Math.random() * transferStops.length)];
+  tqStations = [station];
+  tqCurrentIdx = 0;
+  tqStreak = 0;
+  tqBestStreak = 0;
+  tqCorrectCount = 0;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('transfer-quiz').classList.add('active');
+  const tqBadge = document.getElementById('tq-line-badge');
+  tqBadge.style.background = LINE_COLORS[line];
+  tqBadge.textContent = line;
+  tqBadge.className = 'line-badge' + (YELLOW_LINES.has(line) ? ' yellow-line' : '');
+
+  // Override tq to return to session after
+  tqSessionMode = true;
+  tqShowStation();
+}
+
+let tqSessionMode = false;
+
+function startNeighborhoodSingle(line) {
+  const q = generateNhQuestion();
+  if (!q) { sessionIdx++; showSessionQuestion(); return; }
+  nhQuestions = [q];
+  nhCurrentIdx = 0;
+  nhCorrectCount = 0;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('neighborhood').classList.add('active');
+  const nhBadge = document.getElementById('nh-line-badge');
+  nhBadge.style.background = LINE_COLORS[line];
+  nhBadge.textContent = line;
+  nhBadge.className = 'line-badge' + (YELLOW_LINES.has(line) ? ' yellow-line' : '');
+
+  nhSessionMode = true;
+  nhShowQuestion();
+}
+
+let nhSessionMode = false;
+
+function sessionQuestionDone(wasCorrect) {
+  if (wasCorrect) sessionCorrect++;
+  sessionIdx++;
+  setTimeout(() => showSessionQuestion(), 300);
+}
+
+function showSessionEnd() {
+  const line = getActiveLine();
+  const mastery = getLineMastery(line);
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('session-end').classList.add('active');
+
+  document.getElementById('session-end-score').textContent = sessionCorrect;
+  document.getElementById('session-end-total').textContent = sessionQuestions.length;
+  document.getElementById('session-end-mastery').textContent = Math.round(mastery.composite * 100) + '%';
+
+  // Check for line unlock
+  if (mastery.composite >= 0.7) {
+    document.getElementById('session-end-title').textContent = 'Line Mastered!';
+  } else {
+    document.getElementById('session-end-title').textContent = 'Session Complete!';
+  }
+}
+
+// ── Home Stats ──
+function updateHomeStats() {
+  const line = getActiveLine();
+  if (!line) return;
+
+  const badge = document.getElementById('home-line-badge');
+  badge.style.background = LINE_COLORS[line];
+  badge.textContent = line;
+  badge.style.color = YELLOW_LINES.has(line) ? '#000' : '#fff';
+
+  const mastery = getLineMastery(line);
+  const pct = Math.round(mastery.composite * 100);
+  document.getElementById('mastery-stat').textContent = pct + '% mastery';
+  document.getElementById('mastery-bar').style.width = pct + '%';
+
+  const bd = document.getElementById('mastery-breakdown');
+  bd.innerHTML =
+    '<span>Stations ' + Math.round(mastery.station * 100) + '%</span>' +
+    '<span>Transfers ' + Math.round(mastery.transfer * 100) + '%</span>' +
+    '<span>Spatial ' + Math.round(mastery.neighborhood * 100) + '%</span>';
+}
+
+// ── Progress Screen ──
+function renderProgress() {
+  const line = getActiveLine();
+  const mastery = getLineMastery(line);
+  const unlocked = getUnlockedLines();
+
+  // Line badge
+  const badge = document.getElementById('progress-line-badge');
+  badge.style.background = LINE_COLORS[line];
+  badge.textContent = line;
+  badge.className = 'line-badge' + (YELLOW_LINES.has(line) ? ' yellow-line' : '');
+  document.getElementById('progress-line-name').textContent = line + ' Train — ' + Math.round(mastery.composite * 100) + '% Mastery';
+
+  // Mastery breakdown
+  const mc = document.getElementById('progress-mastery');
+  mc.innerHTML = '<h3>Mastery Breakdown</h3>' +
+    '<div class="progress-line-item"><span style="flex:1">Station Quiz</span><span>' + Math.round(mastery.station * 100) + '%</span></div>' +
+    '<div class="progress-line-item"><span style="flex:1">Transfer Quiz</span><span>' + Math.round(mastery.transfer * 100) + '%</span></div>' +
+    '<div class="progress-line-item"><span style="flex:1">Neighborhood</span><span>' + Math.round(mastery.neighborhood * 100) + '%</span></div>';
+
+  // All lines
+  const lc = document.getElementById('progress-lines');
+  let html = '<h3>All Lines</h3>';
+  for (const l of LINE_ORDER) {
+    if (l === 'S') continue;
+    const m = getLineMastery(l);
+    const isUnlocked = unlocked.has(l);
+    const isActive = l === line;
+    const pct = Math.round(m.composite * 100);
+    const color = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+
+    html += '<div class="progress-line-item' + (isUnlocked ? '' : ' locked') + '"' +
+      (isUnlocked && !isActive ? ' onclick="setActiveLine(\'' + l + '\'); navigate(\'\')" style="cursor:pointer"' : '') + '>' +
+      '<div class="line-badge' + (YELLOW_LINES.has(l) ? ' yellow-line' : '') + '" style="background:' + LINE_COLORS[l] + '">' + l + '</div>' +
+      '<div class="line-info"><div class="line-label">' + l + ' Train' + (isActive ? ' (active)' : '') + '</div>' +
+      '<div class="line-pct">' + (isUnlocked ? pct + '% mastery' : 'Locked') + '</div></div>' +
+      '<div class="progress-mini-bar"><div style="width:' + pct + '%;background:' + color + '"></div></div>' +
+      '</div>';
+  }
+  lc.innerHTML = html;
+}
+
+// ── Station Map ──
+let mapInstances = {};
+
+function showStationMap(containerId, station) {
+  const coords = getStationCoords(station);
+  if (!coords) { hideStationMap(containerId); return; }
+
+  // Check mastery — hide map if station is well-known
+  const stats = loadStats();
+  const nh = stats.neighborhood || {};
+  const tq = stats.transfer_quiz || {};
+  let stationCorrect = 0;
+  for (const key of Object.keys(nh)) {
+    if (key.includes(':' + station + ':')) stationCorrect += (nh[key].times_correct || 0);
+  }
+  if (tq[station]) stationCorrect += tq[station].times_correct || 0;
+  if (stationCorrect >= 10) { hideStationMap(containerId); return; }
+
+  const el = document.getElementById(containerId);
+  el.classList.remove('hidden');
+
+  if (mapInstances[containerId]) {
+    mapInstances[containerId].setView(coords, 15, { animate: false });
+  } else {
+    const map = L.map(containerId, {
+      zoomControl: false, attributionControl: false,
+      dragging: false, scrollWheelZoom: false,
+      doubleClickZoom: false, touchZoom: false,
+    }).setView(coords, 15);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(map);
+    mapInstances[containerId] = map;
+  }
+  setTimeout(() => mapInstances[containerId]?.invalidateSize(), 50);
+}
+
+function showRegionMap(containerId, stations) {
+  const coords = stations.map(s => getStationCoords(s)).filter(Boolean);
+  if (coords.length === 0) { hideStationMap(containerId); return; }
+
+  const el = document.getElementById(containerId);
+  el.classList.remove('hidden');
+
+  if (mapInstances[containerId]) {
+    const bounds = L.latLngBounds(coords.map(c => [c[0], c[1]]));
+    mapInstances[containerId].fitBounds(bounds, { padding: [20, 20], animate: false });
+  } else {
+    const bounds = L.latLngBounds(coords.map(c => [c[0], c[1]]));
+    const map = L.map(containerId, {
+      zoomControl: false, attributionControl: false,
+      dragging: false, scrollWheelZoom: false,
+      doubleClickZoom: false, touchZoom: false,
+    }).fitBounds(bounds, { padding: [20, 20] });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(map);
+    mapInstances[containerId] = map;
+  }
+  setTimeout(() => mapInstances[containerId]?.invalidateSize(), 100);
+}
+
+let gameMapMarkers = [];
+
+function addStationMarker(containerId, station, line) {
+  const map = mapInstances[containerId];
+  if (!map) return;
+  const coords = getStationCoords(station);
+  if (!coords) return;
+  const color = LINE_COLORS[line] || '#fff';
+  const marker = L.circleMarker([coords[0], coords[1]], {
+    radius: 5,
+    fillColor: color,
+    color: '#fff',
+    weight: 2,
+    fillOpacity: 1,
+  }).addTo(map);
+  gameMapMarkers.push(marker);
+}
+
+function hideStationMap(containerId) {
+  const el = document.getElementById(containerId);
+  if (el) el.classList.add('hidden');
 }
 
 // ── Context Toast ──
@@ -798,6 +1282,29 @@ function clearContext() {
   if (existing) existing.remove();
 }
 
+// ── Spaced Repetition ──
+// Pick an item from an array, weighted by weakness score (higher = more likely to pick)
+function weightedPick(items, weightFn) {
+  const weights = items.map(weightFn);
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (total === 0) return items[Math.floor(Math.random() * items.length)];
+  let r = Math.random() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return items[i];
+  }
+  return items[items.length - 1];
+}
+
+// Sort array by weakness (weakest first), with randomness among similar scores
+function sortByWeakness(items, weightFn) {
+  return [...items].sort((a, b) => {
+    const diff = weightFn(b) - weightFn(a);
+    if (Math.abs(diff) < 0.1) return Math.random() - 0.5; // shuffle ties
+    return diff;
+  });
+}
+
 // ── Stats Persistence ──
 function loadStats() {
   try {
@@ -809,9 +1316,10 @@ function saveGameStats(lineKey) {
   const stats = loadStats();
   if (!stats.fill_the_line) stats.fill_the_line = {};
   const prev = stats.fill_the_line[lineKey] || { times_played: 0, known_stations: [] };
-  // Merge newly learned stations
+  // Merge newly learned stations, remove missed ones
   const known = new Set(prev.known_stations || []);
   for (const s of firstTryStations) known.add(s);
+  for (const s of missedStations) known.delete(s);
   const knownArr = [...known];
   const totalStops = allStops.length;
   stats.fill_the_line[lineKey] = {
@@ -831,13 +1339,107 @@ let tqBestStreak = 0;
 let tqCorrectCount = 0;
 let tqSelected = new Set();
 let tqSubmitted = false;
+let tqPhase = 'color'; // 'color' or 'bonus'
+let tqBonusSelected = new Set();
+let tqLastColorCorrect = false;
+
+const COLOR_GROUPS = [
+  { name: 'Red', color: '#EE352E', lines: ['1','2','3'] },
+  { name: 'Green', color: '#00933C', lines: ['4','5','6'] },
+  { name: 'Purple', color: '#B933AD', lines: ['7'] },
+  { name: 'Blue', color: '#0039A6', lines: ['A','C','E'] },
+  { name: 'Orange', color: '#FF6319', lines: ['B','D','F','M'] },
+  { name: 'Lime', color: '#6CBE45', lines: ['G'] },
+  { name: 'Brown', color: '#996633', lines: ['J','Z'] },
+  { name: 'Gray', color: '#A7A9AC', lines: ['L'] },
+  { name: 'Yellow', color: '#FCCC0A', lines: ['N','Q','R','W'] },
+];
+
+// Stations where the same name refers to different physical locations.
+// Each entry lists groups of lines that share a physical station.
+const SPLIT_STATIONS = {
+  '72 St': [['1','2','3'], ['B','C','Q']],
+  '86 St': [['1'], ['4','5','6'], ['B','C'], ['N','R'], ['Q']],
+  '96 St': [['1','2','3'], ['6'], ['B','C'], ['Q']],
+  '103 St': [['1'], ['6'], ['B','C']],
+  '116 St': [['2','3'], ['6'], ['B','C']],
+  '125 St': [['1'], ['2','3'], ['4','5','6'], ['A','B','C','D']],
+  '23 St': [['1'], ['C','E'], ['F','M'], ['R','W']],
+  '28 St': [['1'], ['6'], ['R','W']],
+  '14 St': [['1','2','3'], ['A','C','E'], ['F','M']],
+  'Prospect Av': [['2','5'], ['R']],
+  'Canal St': [['6','J','Z','N','Q','R','W'], ['A','C','E'], ['1']],
+  'DeKalb Av': [['B','Q','R'], ['L']],
+  '7 Av': [['B','D','E'], ['B','Q','F','G']],
+};
+
+// Alternate coordinates for split stations (keyed by group index in SPLIT_STATIONS)
+const SPLIT_COORDS = {
+  '72 St': [[40.778453,-73.98197], [40.768857,-73.958413]],
+  '86 St': [[40.788644,-73.976218], [40.779492,-73.955589], [40.785868,-73.968916], [40.622687,-74.028398], [40.777891,-73.951418]],
+  '96 St': [[40.793919,-73.972323], [40.785672,-73.95107], [40.791541,-73.964694], [40.784318,-73.947152]],
+  '103 St': [[40.799446,-73.968379], [40.790600,-73.947478], [40.796092,-73.961454]],
+  '116 St': [[40.802098,-73.949625], [40.807722,-73.941617], [40.805085,-73.954882]],
+  '125 St': [[40.815581,-73.958372], [40.807754,-73.945495], [40.804138,-73.937594], [40.811109,-73.952343]],
+  '23 St': [[40.744081,-73.995657], [40.745906,-74.001775], [40.742878,-73.992821], [40.741303,-73.989344]],
+  '28 St': [[40.747215,-73.993365], [40.743068,-73.984264], [40.745494,-73.988691]],
+  '14 St': [[40.737826,-74.000201], [40.740893,-74.002586], [40.738228,-73.996209]],
+  'Prospect Av': [[40.819585,-73.90177], [40.660427,-73.992506]],
+  'Canal St': [[40.718803,-73.999921], [40.720824,-74.005229], [40.722854,-74.006277]],
+  'DeKalb Av': [[40.690635,-73.981824], [40.703811,-73.918425]],
+  '7 Av': [[40.762862,-73.981637], [40.67271,-73.972367]],
+};
+
+// Borough overrides for split stations [group index → borough]
+const SPLIT_BOROUGHS = {
+  '7 Av': ['Manhattan', 'Brooklyn'],
+  '86 St': ['Manhattan', 'Manhattan', 'Manhattan', 'Brooklyn', 'Manhattan'],
+  'Prospect Av': ['Bronx', 'Brooklyn'],
+};
+
+function getStationBorough(station) {
+  const split = SPLIT_STATIONS[station];
+  const boroughs = SPLIT_BOROUGHS[station];
+  if (split && boroughs) {
+    const groupIdx = split.findIndex(g => g.includes(ACTIVE_LINE));
+    if (groupIdx >= 0 && boroughs[groupIdx]) return boroughs[groupIdx];
+  }
+  return SUBWAY_DATA.stations[station]?.borough || '';
+}
+
+function getStationCoords(station) {
+  const split = SPLIT_STATIONS[station];
+  const splitCoords = SPLIT_COORDS[station];
+  if (split && splitCoords) {
+    const groupIdx = split.findIndex(g => g.includes(ACTIVE_LINE));
+    if (groupIdx >= 0 && splitCoords[groupIdx]) return splitCoords[groupIdx];
+  }
+  return STATION_COORDS[station] || null;
+}
+
+function lineToColorGroup(line) {
+  return COLOR_GROUPS.find(g => g.lines.includes(line));
+}
+
+// Get the actual transfer lines at a station for the active line,
+// accounting for split stations where same name ≠ same physical station
+function getRealTransferLines(station) {
+  const allLines = SUBWAY_DATA.stations[station]?.lines || [];
+  const split = SPLIT_STATIONS[station];
+  if (!split) return allLines;
+  // Find which group the active line belongs to
+  const myGroup = split.find(g => g.includes(ACTIVE_LINE));
+  if (!myGroup) return allLines; // fallback
+  // Only include lines from the same physical group
+  return myGroup;
+}
 
 function getTransferStations() {
   const lineStops = SUBWAY_DATA.lines[ACTIVE_LINE].stops;
   const result = [];
   for (const name of lineStops) {
-    const data = SUBWAY_DATA.stations[name];
-    if (data && data.lines.length >= 2) {
+    const realLines = getRealTransferLines(name);
+    if (realLines.length >= 2) {
       result.push(name);
     }
   }
@@ -854,7 +1456,13 @@ function shuffleArray(arr) {
 }
 
 function startTransferQuiz() {
-  const all = shuffleArray(getTransferStations());
+  const stats = loadStats();
+  const tqStats = stats.transfer_quiz || {};
+  const all = sortByWeakness(getTransferStations(), (station) => {
+    const s = tqStats[station];
+    if (!s) return 10; // never seen = highest priority
+    return Math.max(0, 10 - s.times_correct);
+  });
   tqStations = all.slice(0, 10);
   tqCurrentIdx = 0;
   tqStreak = 0;
@@ -873,7 +1481,9 @@ function startTransferQuiz() {
 function tqShowStation() {
   clearContext();
   tqSelected = new Set();
+  tqBonusSelected = new Set();
   tqSubmitted = false;
+  tqPhase = 'color';
 
   const station = tqStations[tqCurrentIdx];
   const data = SUBWAY_DATA.stations[station];
@@ -886,84 +1496,268 @@ function tqShowStation() {
   document.getElementById('tq-result').className = 'tq-result';
   document.getElementById('tq-submit-btn').disabled = false;
   document.getElementById('tq-submit-btn').textContent = 'Submit';
+  document.getElementById('tq-phase-label').textContent = 'Which color lines stop here?';
+  document.getElementById('tq-bonus-area').style.display = 'none';
+  showStationMap('tq-map', station);
 
+  // Show color group buttons with line badges
   const grid = document.getElementById('tq-line-grid');
   grid.innerHTML = '';
-  for (const line of LINE_ORDER) {
-    const badge = document.createElement('div');
-    badge.className = 'line-badge' + (YELLOW_LINES.has(line) ? ' yellow-line' : '');
-    badge.style.background = LINE_COLORS[line];
-    badge.textContent = line;
-    badge.dataset.line = line;
-    badge.onclick = () => {
+  for (const group of COLOR_GROUPS) {
+    const btn = document.createElement('div');
+    btn.className = 'tq-group-btn';
+    btn.dataset.group = group.name;
+    const badges = document.createElement('div');
+    badges.className = 'tq-group-badges';
+    for (const line of group.lines) {
+      const badge = document.createElement('div');
+      badge.className = 'line-badge' + (YELLOW_LINES.has(line) ? ' yellow-line' : '');
+      badge.style.background = LINE_COLORS[line];
+      badge.textContent = line;
+      badges.appendChild(badge);
+    }
+    btn.appendChild(badges);
+    btn.onclick = () => {
       if (tqSubmitted) return;
-      if (tqSelected.has(line)) {
-        tqSelected.delete(line);
-        badge.classList.remove('selected');
+      if (tqSelected.has(group.name)) {
+        tqSelected.delete(group.name);
+        btn.classList.remove('selected');
       } else {
-        tqSelected.add(line);
-        badge.classList.add('selected');
+        tqSelected.add(group.name);
+        btn.classList.add('selected');
       }
     };
-    grid.appendChild(badge);
+    grid.appendChild(btn);
   }
 }
 
 function tqSubmit() {
-  if (tqSubmitted) return;
+  if (tqPhase === 'color') {
+    tqSubmitColor();
+  } else {
+    tqSubmitBonus();
+  }
+}
+
+function tqSubmitColor() {
   tqSubmitted = true;
 
   const station = tqStations[tqCurrentIdx];
-  const correctLines = new Set(SUBWAY_DATA.stations[station].lines);
-  const badges = document.querySelectorAll('#tq-line-grid .line-badge');
-  let isFullyCorrect = true;
+  const correctLines = new Set(getRealTransferLines(station));
+  const correctGroups = new Set();
+  for (const line of correctLines) {
+    const g = lineToColorGroup(line);
+    if (g) correctGroups.add(g.name);
+  }
 
-  for (const badge of badges) {
-    const line = badge.dataset.line;
-    const isCorrect = correctLines.has(line);
-    const wasSelected = tqSelected.has(line);
+  const groupBtns = document.querySelectorAll('#tq-line-grid .tq-group-btn');
+  let isFullyCorrect = true;
+  const correctSelectedGroups = [];
+
+  for (const btn of groupBtns) {
+    const name = btn.dataset.group;
+    const isCorrect = correctGroups.has(name);
+    const wasSelected = tqSelected.has(name);
 
     if (isCorrect && wasSelected) {
-      badge.classList.add('tq-correct');
+      btn.classList.add('tq-correct');
+      correctSelectedGroups.push(name);
     } else if (isCorrect && !wasSelected) {
-      badge.classList.add('tq-missed');
+      btn.classList.add('tq-missed');
       isFullyCorrect = false;
     } else if (!isCorrect && wasSelected) {
-      badge.classList.add('tq-wrong');
+      btn.classList.add('tq-wrong');
       isFullyCorrect = false;
     }
-    badge.classList.remove('selected');
+    btn.classList.remove('selected');
   }
+
+  tqLastColorCorrect = isFullyCorrect;
 
   const resultEl = document.getElementById('tq-result');
   if (isFullyCorrect) {
     resultEl.textContent = 'Correct!';
     resultEl.className = 'tq-result correct';
+  } else {
+    resultEl.textContent = 'Incorrect';
+    resultEl.className = 'tq-result incorrect';
+    showContext(station);
+  }
+
+  // Check if any correct group has multiple lines — offer bonus
+  const bonusGroups = correctSelectedGroups.filter(name => {
+    const group = COLOR_GROUPS.find(g => g.name === name);
+    return group && group.lines.length > 1;
+  });
+
+  if (isFullyCorrect && bonusGroups.length > 0) {
+    // Show bonus phase
+    tqPhase = 'bonus';
+    tqSubmitted = false;
+    document.getElementById('tq-submit-btn').disabled = false;
+    document.getElementById('tq-submit-btn').textContent = 'Submit Bonus';
+    resultEl.textContent = 'Now pick the exact lines!';
+    resultEl.className = 'tq-result';
+
+    const bonusArea = document.getElementById('tq-bonus-area');
+    bonusArea.style.display = 'block';
+    const bonusGrid = document.getElementById('tq-bonus-grid');
+    bonusGrid.innerHTML = '';
+
+    for (const groupName of bonusGroups) {
+      const group = COLOR_GROUPS.find(g => g.name === groupName);
+      for (const line of group.lines) {
+        const badge = document.createElement('div');
+        badge.className = 'line-badge' + (YELLOW_LINES.has(line) ? ' yellow-line' : '');
+        badge.style.background = LINE_COLORS[line];
+        badge.textContent = line;
+        badge.dataset.line = line;
+        badge.style.width = '48px';
+        badge.style.height = '48px';
+        badge.style.fontSize = '20px';
+        badge.style.cursor = 'pointer';
+        badge.style.opacity = '0.5';
+        badge.style.transition = 'transform 0.1s, box-shadow 0.15s';
+        badge.onclick = () => {
+          if (tqSubmitted) return;
+          if (tqBonusSelected.has(line)) {
+            tqBonusSelected.delete(line);
+            badge.style.opacity = '0.5';
+            badge.style.boxShadow = 'none';
+          } else {
+            tqBonusSelected.add(line);
+            badge.style.opacity = '1';
+            badge.style.boxShadow = '0 0 0 3px #fff';
+          }
+        };
+        bonusGrid.appendChild(badge);
+      }
+    }
+  } else {
+    // No bonus — score and advance
+    tqFinishQuestion(isFullyCorrect);
+  }
+}
+
+function tqSubmitBonus() {
+  tqSubmitted = true;
+
+  const station = tqStations[tqCurrentIdx];
+  const correctLines = new Set(getRealTransferLines(station));
+  const badges = document.querySelectorAll('#tq-bonus-grid .line-badge');
+  let bonusCorrect = true;
+
+  for (const badge of badges) {
+    const line = badge.dataset.line;
+    const isCorrect = correctLines.has(line);
+    const wasSelected = tqBonusSelected.has(line);
+
+    if (isCorrect && wasSelected) {
+      badge.style.opacity = '1';
+      badge.style.boxShadow = '0 0 0 3px var(--green)';
+    } else if (isCorrect && !wasSelected) {
+      badge.style.opacity = '1';
+      badge.style.boxShadow = '0 0 0 3px var(--red)';
+      bonusCorrect = false;
+    } else if (!isCorrect && wasSelected) {
+      badge.style.opacity = '0.3';
+      badge.style.boxShadow = '0 0 0 3px var(--red)';
+      bonusCorrect = false;
+    } else {
+      badge.style.opacity = '0.5';
+      badge.style.boxShadow = 'none';
+    }
+  }
+
+  const resultEl = document.getElementById('tq-result');
+  // Colors were correct (tqLastColorCorrect guaranteed true to reach bonus)
+  // Bonus adds extra credit
+  const isFullyCorrect = tqLastColorCorrect && bonusCorrect;
+
+  if (bonusCorrect) {
+    resultEl.innerHTML = '<span style="color:var(--green)">Perfect</span>';
+    resultEl.className = 'tq-result';
+  } else {
+    resultEl.innerHTML = '<span style="color:var(--green)">Colors ✓</span> <span style="opacity:0.4;margin:0 4px">·</span> <span style="color:var(--red)">Lines ✗</span>';
+    resultEl.className = 'tq-result';
+  }
+
+  document.getElementById('tq-submit-btn').disabled = true;
+  tqFinishQuestion(isFullyCorrect);
+}
+
+function tqShowLineDetails() {
+  const station = tqStations[tqCurrentIdx];
+  const correctLines = new Set(getRealTransferLines(station));
+  const groupBtns = document.querySelectorAll('#tq-line-grid .tq-group-btn');
+  const correctGroups = new Set();
+  for (const line of correctLines) {
+    const g = lineToColorGroup(line);
+    if (g) correctGroups.add(g.name);
+  }
+  for (const btn of groupBtns) {
+    const name = btn.dataset.group;
+    if (correctGroups.has(name)) {
+      const group = COLOR_GROUPS.find(g => g.name === name);
+      const linesHere = new Set(group.lines.filter(l => correctLines.has(l)));
+      const badges = btn.querySelectorAll('.line-badge');
+      for (const badge of badges) {
+        if (linesHere.has(badge.textContent)) {
+          badge.style.boxShadow = '0 0 0 2px #fff';
+        } else {
+          badge.style.opacity = '0.25';
+        }
+      }
+      if (!btn.querySelector('.tq-group-detail')) {
+        const detail = document.createElement('div');
+        detail.className = 'tq-group-detail';
+        detail.textContent = [...linesHere].join('/') + ' stop' + (linesHere.size > 1 ? '' : 's') + ' here';
+        btn.appendChild(detail);
+      }
+    }
+  }
+}
+
+function tqFinishQuestion(isFullyCorrect) {
+  const station = tqStations[tqCurrentIdx];
+
+  // Now show the specific line details
+  tqShowLineDetails();
+
+  if (isFullyCorrect) {
     tqStreak++;
     tqCorrectCount++;
     if (tqStreak > tqBestStreak) tqBestStreak = tqStreak;
   } else {
-    resultEl.textContent = 'Not quite';
-    resultEl.className = 'tq-result incorrect';
     tqStreak = 0;
-    showContext(station);
   }
 
   document.getElementById('tq-streak').textContent = 'Streak: ' + tqStreak;
   document.getElementById('tq-submit-btn').disabled = true;
 
-  // Save stats for this station
   tqSaveStats(station, isFullyCorrect);
 
-  // Auto-advance after 2 seconds
-  setTimeout(() => {
+  const advance = () => {
     tqCurrentIdx++;
-    if (tqCurrentIdx >= tqStations.length) {
+    if (tqSessionMode && tqCurrentIdx >= tqStations.length) {
+      tqSessionMode = false;
+      sessionQuestionDone(isFullyCorrect);
+    } else if (tqCurrentIdx >= tqStations.length) {
       tqShowEnd();
     } else {
       tqShowStation();
     }
-  }, 2000);
+  };
+
+  if (isFullyCorrect) {
+    document.getElementById('tq-submit-btn').disabled = true;
+    setTimeout(advance, 800);
+  } else {
+    const submitBtn = document.getElementById('tq-submit-btn');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Next →';
+    submitBtn.onclick = () => { submitBtn.onclick = () => tqSubmit(); advance(); };
+  }
 }
 
 function tqSaveStats(station, wasCorrect) {
@@ -1017,9 +1811,17 @@ function generateAdjacentQuestion() {
   const stops = SUBWAY_DATA.lines[line].stops;
   if (stops.length < 3) return null;
 
-  // Pick a station not at the edges
-  const idx = 1 + Math.floor(Math.random() * (stops.length - 2));
-  const station = stops[idx];
+  // Pick a station not at the edges, weighted toward unseen/weak stations
+  const stats = loadStats();
+  const nhStats = stats.neighborhood || {};
+  const innerStops = stops.slice(1, -1);
+  const station = weightedPick(innerStops, (s) => {
+    const key = line + ':' + s + ':adjacent';
+    const prev = nhStats[key];
+    if (!prev) return 10; // never seen
+    return Math.max(1, 10 - prev.times_correct);
+  });
+  const idx = stops.indexOf(station);
 
   // Pick direction
   const goLower = Math.random() < 0.5;
@@ -1040,7 +1842,7 @@ function generateAdjacentQuestion() {
 
   return {
     type: 'adjacent',
-    question: 'What is one stop <span class="nh-highlight">' + dirLabel + '</span> of <span class="nh-highlight">' + station + '</span> on the <span class="nh-highlight">' + line + '</span> train?',
+    question: 'What is one stop <span class="nh-highlight">' + dirLabel + '</span> of <span class="nh-highlight">' + station + '</span>' + (getStationBorough(station) ? ' <span style="opacity:0.5">(' + getStationBorough(station) + ')</span>' : '') + ' on the <span class="nh-highlight">' + line + '</span>?',
     options: options,
     answer: correctAnswer,
     station: station,
@@ -1051,7 +1853,14 @@ function generateAdjacentQuestion() {
 function generateBoroughQuestion() {
   const line = ACTIVE_LINE;
   const stops = SUBWAY_DATA.lines[line].stops;
-  const station = stops[Math.floor(Math.random() * stops.length)];
+  const stats = loadStats();
+  const nhStats = stats.neighborhood || {};
+  const station = weightedPick(stops, (s) => {
+    const key = line + ':' + s + ':borough';
+    const prev = nhStats[key];
+    if (!prev) return 10;
+    return Math.max(1, 10 - prev.times_correct);
+  });
   const correctBorough = SUBWAY_DATA.stations[station]?.borough || 'Manhattan';
 
   const boroughs = ['Manhattan', 'Brooklyn', 'Queens', 'Bronx'];
@@ -1072,17 +1881,23 @@ function generateOrderingQuestion() {
   const stops = SUBWAY_DATA.lines[line].stops;
   if (stops.length < 4) return null;
 
-  // Pick two distinct stations with some distance between them
-  let idxA, idxB;
-  let attempts = 0;
+  // Pick two distinct stations, weighted toward weak ones
+  const stats = loadStats();
+  const nhStats = stats.neighborhood || {};
+  const stationA = weightedPick(stops, (s) => {
+    const key = line + ':' + s + ':ordering';
+    const prev = nhStats[key];
+    if (!prev) return 10;
+    return Math.max(1, 10 - prev.times_correct);
+  });
+  const idxA = stops.indexOf(stationA);
+  let idxB, attempts = 0;
   do {
-    idxA = Math.floor(Math.random() * stops.length);
     idxB = Math.floor(Math.random() * stops.length);
     attempts++;
   } while ((idxA === idxB || Math.abs(idxA - idxB) < 2) && attempts < 50);
   if (idxA === idxB) return null;
 
-  const stationA = stops[idxA];
   const stationB = stops[idxB];
 
   // "Heading toward [terminal], which comes first?"
@@ -1148,6 +1963,10 @@ function nhShowQuestion() {
   document.getElementById('nh-score').textContent = 'Score: ' + nhCorrectCount + ' / ' + nhCurrentIdx;
   document.getElementById('nh-question').innerHTML = q.question;
 
+  // Show map for the station being asked about
+  const nhStation = q.station.includes('|') ? q.station.split('|')[0] : q.station;
+  showStationMap('nh-map', nhStation);
+
   const choicesEl = document.getElementById('nh-choices');
   choicesEl.innerHTML = '';
   for (const opt of q.options) {
@@ -1170,7 +1989,7 @@ function nhHandleChoice(btn, picked, question) {
     nhCorrectCount++;
   } else {
     btn.classList.add('wrong');
-    showContext(question.station);
+    showContext(question.answer);
     // Highlight the correct answer
     const allBtns = document.querySelectorAll('#nh-choices .choice-btn');
     for (const b of allBtns) {
@@ -1185,15 +2004,30 @@ function nhHandleChoice(btn, picked, question) {
   // Save stats
   nhSaveStats(question, isCorrect);
 
-  // Advance after delay
-  setTimeout(() => {
+  document.querySelectorAll('#nh-choices .choice-btn').forEach(b => { b.disabled = true; });
+
+  const advance = () => {
     nhCurrentIdx++;
-    if (nhCurrentIdx >= nhQuestions.length) {
+    if (nhSessionMode && nhCurrentIdx >= nhQuestions.length) {
+      nhSessionMode = false;
+      sessionQuestionDone(isCorrect);
+    } else if (nhCurrentIdx >= nhQuestions.length) {
       nhShowEnd();
     } else {
       nhShowQuestion();
     }
-  }, 1500);
+  };
+
+  if (isCorrect) {
+    setTimeout(advance, 800);
+  } else {
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'choice-btn';
+    nextBtn.textContent = 'Next →';
+    nextBtn.style.cssText = 'margin-top:24px; background:#fff; color:#000; border-color:#fff;';
+    nextBtn.onclick = advance;
+    document.getElementById('nh-choices').appendChild(nextBtn);
+  }
 }
 
 function nhSaveStats(question, wasCorrect) {
